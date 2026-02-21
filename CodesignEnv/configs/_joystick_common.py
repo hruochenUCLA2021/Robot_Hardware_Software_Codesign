@@ -123,6 +123,12 @@ class BaseJoystick(hi_base.HiEnv):
     qpos = self._init_q
     qvel = jp.zeros(self.mjx_model.nv)
 
+    # Phase (gait clock) like HERMES NoLinearVel.
+    rng, key = jax.random.split(rng)
+    gait_freq = jax.random.uniform(key, (1,), minval=1.25, maxval=1.75)
+    phase_dt = 2 * jp.pi * self.dt * gait_freq
+    phase = jp.array([0.0, jp.pi], dtype=jp.float32)
+
     rng, cmd_rng = jax.random.split(rng)
     cmd = self.sample_command(cmd_rng)
 
@@ -140,6 +146,9 @@ class BaseJoystick(hi_base.HiEnv):
         # Privileged-only signals.
         "feet_air_time": jp.zeros(2),
         "last_contact": jp.zeros(2, dtype=bool),
+        # Phase (gait clock).
+        "phase_dt": phase_dt,
+        "phase": phase,
     }
     metrics = {f"reward/{k}": jp.zeros(()) for k in self._config.reward_config.scales.keys()}
     obs = self._get_obs(data, info, contact)
@@ -156,9 +165,9 @@ class BaseJoystick(hi_base.HiEnv):
     contact = jp.hstack([left_contact, right_contact])
 
     # Feet air-time bookkeeping (privileged, like HERMES NoLinearVel).
-    contact_filt = contact | state.info.get("last_contact", jp.zeros(2, dtype=bool))
-    first_contact = (state.info.get("feet_air_time", jp.zeros(2)) > 0.0) * contact_filt
-    state.info["feet_air_time"] = state.info.get("feet_air_time", jp.zeros(2)) + self.dt
+    contact_filt = contact | state.info["last_contact"]
+    first_contact = (state.info["feet_air_time"] > 0.0) * contact_filt
+    state.info["feet_air_time"] = state.info["feet_air_time"] + self.dt
 
     obs = self._get_obs(data, state.info, contact)
     done = self._get_termination(data)
@@ -173,8 +182,18 @@ class BaseJoystick(hi_base.HiEnv):
     state.info["step"] += 1
     state.info["last_act"] = action
     # Reset air-time to 0 for feet that are in contact, like HERMES.
-    state.info["feet_air_time"] = state.info.get("feet_air_time", jp.zeros(2)) * (~contact)
+    state.info["feet_air_time"] = state.info["feet_air_time"] * (~contact)
     state.info["last_contact"] = contact
+
+    # Update gait phase (HERMES-style). When command is ~0, hold phase at pi.
+    phase_tp1 = state.info["phase"] + state.info["phase_dt"]
+    state.info["phase"] = jp.fmod(phase_tp1 + jp.pi, 2 * jp.pi) - jp.pi
+    state.info["phase"] = jp.where(
+        jp.linalg.norm(state.info["command"]) > 0.01,
+        state.info["phase"],
+        jp.ones(2, dtype=state.info["phase"].dtype) * jp.pi,
+    )
+
     state.info["rng"], cmd_rng = jax.random.split(state.info["rng"])
     # Resample command periodically.
     state.info["command"] = jp.where(state.info["step"] > 500, self.sample_command(cmd_rng), state.info["command"])
@@ -214,6 +233,17 @@ class BaseJoystick(hi_base.HiEnv):
         * self._config.noise_config.scales.gravity
     )
 
+    # Base linear velocity (IMU-local). Actor does NOT see it (NoLinearVel),
+    # but critic gets a noisy version via state_with_linvel (HERMES style).
+    linvel = self.get_local_linvel(data)
+    info["rng"], noise_rng = jax.random.split(info["rng"])
+    noisy_linvel = (
+        linvel
+        + (2 * jax.random.uniform(noise_rng, shape=linvel.shape) - 1)
+        * self._config.noise_config.level
+        * self._config.noise_config.scales.linvel
+    )
+
     joint_angles = data.qpos[7:]
     info["rng"], noise_rng = jax.random.split(info["rng"])
     noisy_joint_angles = (
@@ -232,6 +262,11 @@ class BaseJoystick(hi_base.HiEnv):
         * self._config.noise_config.scales.joint_vel
     )
 
+    # Phase features (HERMES style): concat([cos(phase), sin(phase)]).
+    cos = jp.cos(info["phase"])
+    sin = jp.sin(info["phase"])
+    phase_feat = jp.concatenate([cos, sin])
+
     state = jp.hstack([
         noisy_gyro,
         noisy_gravity,
@@ -239,10 +274,22 @@ class BaseJoystick(hi_base.HiEnv):
         noisy_joint_angles - self._default_pose,
         noisy_joint_vel,
         info["last_act"],
+        phase_feat,
     ])
 
-    # Critic observation ("privileged_state"): accurate signals + sim-only privates.
-    linvel = self.get_local_linvel(data)
+    # Critic observation ("privileged_state"): include a HERMES-style noisy prefix
+    # (state_with_linvel) plus accurate + sim-only signals.
+    state_with_linvel = jp.hstack([
+        noisy_linvel,
+        noisy_gyro,
+        noisy_gravity,
+        info["command"],
+        noisy_joint_angles - self._default_pose,
+        noisy_joint_vel,
+        info["last_act"],
+        phase_feat,
+    ])
+
     accelerometer = self.get_accelerometer(data)
     global_angvel = self.get_global_angvel(data)
     root_height = data.qpos[2]
@@ -251,6 +298,7 @@ class BaseJoystick(hi_base.HiEnv):
         mjx_env.get_sensor_data(self.mj_model, data, "right_foot_global_linvel").ravel(),
     ])
     privileged_state = jp.hstack([
+        state_with_linvel,
         # Accurate proprioception.
         gyro,
         accelerometer,
@@ -264,7 +312,7 @@ class BaseJoystick(hi_base.HiEnv):
         data.actuator_force,
         contact.astype(jp.float32),
         feet_vel,
-        jp.asarray(info.get("feet_air_time", jp.zeros(2))),
+        jp.asarray(info["feet_air_time"]),
     ])
 
     state = jp.nan_to_num(state, nan=0.0, posinf=0.0, neginf=0.0)
@@ -319,7 +367,7 @@ class BaseJoystick(hi_base.HiEnv):
         "ang_vel_xy": jp.sum(jp.square(local_angvel[:2])),
         "orientation": orientation,
         "action_rate": jp.sum(jp.square(action - info["last_act"])),
-        "feet_air_time": self._reward_feet_air_time(info.get("feet_air_time", jp.zeros(2)), first_contact, cmd),
+        "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
         "alive": jp.array(1.0),
     }
 
