@@ -266,9 +266,50 @@ def rollout_joystick(
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = True
     scene_option.flags[mujoco.mjtVisFlag.mjVIS_CONTACTFORCE] = True
   # If camera is None, use the default view (uses <visual><global ...>).
-  frames = env.render(
-      traj_to_render, camera=camera, width=640, height=480, scene_option=scene_option
-  )
+  # Some of our generated scenes do not define named cameras. If the requested
+  # camera doesn't exist, fall back to the default camera (camera=None).
+  requested_camera = camera
+  if requested_camera is not None:
+    try:
+      # Raises KeyError if camera name doesn't exist.
+      env.mj_model.camera(str(requested_camera))
+    except Exception:  # pylint: disable=broad-except
+      try:
+        cam_names = []
+        for cam_id in range(int(env.mj_model.ncam)):
+          name = mujoco.mj_id2name(env.mj_model, mujoco.mjtObj.mjOBJ_CAMERA, cam_id)
+          if name:
+            cam_names.append(name)
+      except Exception:  # pylint: disable=broad-except
+        cam_names = []
+      print(
+          f"[RENDER] Warning: camera {requested_camera!r} not found in model; "
+          f"falling back to default camera (None). Available cameras: {cam_names}"
+      )
+      requested_camera = None
+
+  try:
+    frames = env.render(
+        traj_to_render,
+        camera=requested_camera,
+        width=640,
+        height=480,
+        scene_option=scene_option,
+    )
+  except ValueError as e:
+    # Extra safety: if MuJoCo still complains about a missing named camera,
+    # retry with default camera.
+    msg = str(e)
+    if (requested_camera is not None) and ("camera" in msg) and ("does not exist" in msg):
+      print(
+          f"[RENDER] Warning: render failed for camera {requested_camera!r} ({e}); "
+          "retrying with default camera (None)."
+      )
+      frames = env.render(
+          traj_to_render, camera=None, width=640, height=480, scene_option=scene_option
+      )
+    else:
+      raise
   media.write_video(out, frames, fps=fps)
   print(f"[VIDEO] wrote {out}")
 
