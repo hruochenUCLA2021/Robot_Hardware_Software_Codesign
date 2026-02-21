@@ -33,7 +33,8 @@ os.environ["JAX_PERSISTENT_CACHE_MIN_ENTRY_SIZE_BYTES"] = "0"
 os.environ["JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS"] = "0"
 
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", "..", ".."))
+# training/ -> CodesignEnv/ -> Robot_Hardware_Software_Codesign/
+_PROJECT_ROOT = os.path.abspath(os.path.join(_THIS_DIR, "..", ".."))
 if _PROJECT_ROOT not in sys.path:
   sys.path.insert(0, _PROJECT_ROOT)
 
