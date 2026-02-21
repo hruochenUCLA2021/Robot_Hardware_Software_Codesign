@@ -242,21 +242,22 @@ def rollout_joystick(
   expected_dim = int(state.obs["state"].shape[-1])
   try:
     _ = policy_raw(state.obs, rng)
-  except TypeError as e:
+  except Exception as e:  # pylint: disable=broad-except
+    # JAX often wraps internal TypeErrors in a SimplifiedTraceback, so we catch
+    # broadly and match on the broadcast-shape message.
     msg = str(e)
     m = re.search(r"broadcasting: \\((\\d+),\\), \\((\\d+),\\)", msg)
-    if m:
-      a = int(m.group(1))
-      b = int(m.group(2))
-      cur = expected_dim
-      expected_dim = b if a == cur else (a if b == cur else min(a, b))
-      print(
-          f"[ROLLOUT] Warning: checkpoint expects state dim {expected_dim} "
-          f"but env provides {cur}. Slicing/padding obs['state'] for rollout. "
-          "Retrain to use new obs features."
-      )
-    else:
+    if not m:
       raise
+
+    cur = expected_dim
+    # In Brax normalization this is typically (data_dim,), (mean_dim,).
+    expected_dim = int(m.group(2))
+    print(
+        f"[ROLLOUT] Warning: checkpoint expects state dim {expected_dim} "
+        f"but env provides {cur}. Slicing/padding obs['state'] for rollout. "
+        "Retrain to use new obs features."
+    )
 
   policy = jax.jit(lambda obs, key: policy_raw(_adapt_state_obs(obs, expected_dim), key))
 
