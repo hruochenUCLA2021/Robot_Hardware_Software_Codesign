@@ -1,0 +1,58 @@
+checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrain_flat/final
+env_name: ChopstickbotJoystickFlatTerrain
+output_dir: video_rollout_chopstickbot
+
+# Global toggle: whether to visualize contact points/forces in rendered videos.
+# Can be overridden per rollout below.
+show_contact: false
+
+# Optional: path to a YAML env_config (e.g. a saved `env_config.yaml` from a
+# training run). If null, the default joystick env config is used.
+env_config_path: null
+
+# Global defaults (can be overridden per rollout)
+max_steps: 1000
+render_every: 1
+anim_skip: 10
+
+rollouts:
+  # Forward walking
+  - name: flat_forward_track
+    out: chopstickbot_flat_forward_track.mp4
+    command: [1.0, 0.0, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: track
+
+  - name: flat_forward_fixed
+    out: chopstickbot_flat_forward_fixed.mp4
+    command: [1.0, 0.0, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: null
+
+  # Sideways walking
+  - name: flat_side_track
+    out: chopstickbot_flat_side_track.mp4
+    command: [0.0, 0.5, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: track
+
+  - name: flat_side_fixed
+    out: chopstickbot_flat_side_fixed.mp4
+    command: [0.0, 0.5, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: null
+
+  # Turn in place
+  - name: flat_turn_track
+    out: chopstickbot_flat_turn_track.mp4
+    command: [0.0, 0.0, 1.5]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: track
+
+  - name: flat_turn_fixed
+    out: chopstickbot_flat_turn_fixed.mp4
+    command: [0.0, 0.0, 1.5]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: null
+
+

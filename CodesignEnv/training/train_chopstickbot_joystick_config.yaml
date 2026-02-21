@@ -1,0 +1,56 @@
+## Training configuration for `train_chopstickbot_joystick.py`
+##
+## mode: which training regime to run
+##   - "flat"       : train only ChopstickbotJoystickFlatTerrain
+##   - "rough"      : train only ChopstickbotJoystickRoughTerrain
+##   - "curriculum" : train flat first, then rough, with optional checkpoint init
+
+mode: flat
+
+environment:
+  ## Optional: path to a YAML file with env config overrides (e.g. reward
+  ## scales, push_config, etc.). If null, the built-in defaults are used.
+  env_config_path: null
+
+wandb:
+  ## WANDB_API_KEY: if non-empty, overrides any existing env var.
+  ## Leave as null to use the key already in your environment.
+  api_key: null
+
+flat:
+  ## Number of PPO timesteps for flat-only training.
+  num_timesteps: 100000000
+  ## PPO evaluation and parallelism settings for flat-only training.
+  num_evals: 10
+  num_envs: 8192
+  num_eval_envs: 64
+  ## If null: start from scratch.
+  ## If a path: directory of a previous checkpoint to continue from.
+  from_checkpoint: null
+
+rough:
+  ## Number of PPO timesteps for rough-only training.
+  num_timesteps: 100000000
+  ## PPO evaluation and parallelism settings for rough-only training.
+  num_evals: 10
+  num_envs: 8192
+  num_eval_envs: 64
+  from_checkpoint: null
+
+curriculum:
+  ## Stage 1 (flat):
+  flat_num_timesteps: 100000000
+  flat_num_evals: 10
+  flat_num_envs: 8192
+  flat_num_eval_envs: 64
+  flat_from_checkpoint: null
+
+  ## Stage 2 (rough):
+  rough_num_timesteps: 100000000
+  rough_num_evals: 10
+  rough_num_envs: 8192
+  rough_num_eval_envs: 64
+  ## If null: default is to continue from the flat stage's final checkpoint.
+  rough_from_checkpoint: null
+
+
