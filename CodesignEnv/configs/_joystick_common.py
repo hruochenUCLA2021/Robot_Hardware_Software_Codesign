@@ -27,7 +27,7 @@ def default_config() -> config_dict.ConfigDict:
       sim_dt=0.002,
       episode_length=1000,
       action_repeat=1,
-      action_scale=0.5,
+      action_scale=1.0,
       tracking_sigma=0.25,
       noise_config=config_dict.create(
           level=0.0,
@@ -47,6 +47,7 @@ def default_config() -> config_dict.ConfigDict:
               ang_vel_xy=-0.1,
               orientation=-1.0,
               action_rate=-0.01,
+              feet_air_time=5.0,
               alive=0.5,
           ),
       ),
@@ -103,6 +104,14 @@ class BaseJoystick(hi_base.HiEnv):
     ])
     self._site_id = self._mj_model.site("imu").id
 
+    # Used by rollout scripts for 2D animation. Our base body frame is (z up, y forward),
+    # so yaw should be computed from the IMU site frame (x forward) when available.
+    try:
+      self._torso_body_id = int(self._mj_model.body(consts.ROOT_BODY).id)
+    except Exception:  # pylint: disable=broad-except
+      # Fallback: body 1 is typically the first real body (0 is world).
+      self._torso_body_id = 1
+
   def sample_command(self, rng: jax.Array) -> jax.Array:
     rng, k1, k2, k3 = jax.random.split(rng, 4)
     vx = jax.random.uniform(k1, (1,), minval=self._config.lin_vel_x[0], maxval=self._config.lin_vel_x[1])
@@ -128,6 +137,9 @@ class BaseJoystick(hi_base.HiEnv):
         "step": 0,
         "command": cmd,
         "last_act": jp.zeros(self.mjx_model.nu),
+        # Privileged-only signals.
+        "feet_air_time": jp.zeros(2),
+        "last_contact": jp.zeros(2, dtype=bool),
     }
     metrics = {f"reward/{k}": jp.zeros(()) for k in self._config.reward_config.scales.keys()}
     obs = self._get_obs(data, info, contact)
@@ -143,10 +155,15 @@ class BaseJoystick(hi_base.HiEnv):
     right_contact = jp.any(jp.array([geoms_colliding(data, gid, self._floor_geom_id) for gid in self._right_feet_geom_id]))
     contact = jp.hstack([left_contact, right_contact])
 
+    # Feet air-time bookkeeping (privileged, like HERMES NoLinearVel).
+    contact_filt = contact | state.info.get("last_contact", jp.zeros(2, dtype=bool))
+    first_contact = (state.info.get("feet_air_time", jp.zeros(2)) > 0.0) * contact_filt
+    state.info["feet_air_time"] = state.info.get("feet_air_time", jp.zeros(2)) + self.dt
+
     obs = self._get_obs(data, state.info, contact)
     done = self._get_termination(data)
 
-    rewards = self._get_reward(data, action, state.info)
+    rewards = self._get_reward(data, action, state.info, first_contact=first_contact, contact=contact)
     rewards = {k: v * self._config.reward_config.scales[k] for k, v in rewards.items()}
     # Be robust to occasional numerical issues: never emit NaNs/Infs to PPO.
     total = jp.sum(jp.stack([jp.asarray(v) for v in rewards.values()]))
@@ -155,6 +172,9 @@ class BaseJoystick(hi_base.HiEnv):
 
     state.info["step"] += 1
     state.info["last_act"] = action
+    # Reset air-time to 0 for feet that are in contact, like HERMES.
+    state.info["feet_air_time"] = state.info.get("feet_air_time", jp.zeros(2)) * (~contact)
+    state.info["last_contact"] = contact
     state.info["rng"], cmd_rng = jax.random.split(state.info["rng"])
     # Resample command periodically.
     state.info["command"] = jp.where(state.info["step"] > 500, self.sample_command(cmd_rng), state.info["command"])
@@ -175,39 +195,117 @@ class BaseJoystick(hi_base.HiEnv):
     return fall | nonfinite
 
   def _get_obs(self, data: mjx.Data, info: dict[str, Any], contact: jax.Array) -> dict[str, jax.Array]:
+    # Actor observation ("state"): noisy IMU + joints, no linvel, no contact (NoLinearVel style).
     gyro = self.get_gyro(data)
-    linvel = self.get_local_linvel(data)
+    info["rng"], noise_rng = jax.random.split(info["rng"])
+    noisy_gyro = (
+        gyro
+        + (2 * jax.random.uniform(noise_rng, shape=gyro.shape) - 1)
+        * self._config.noise_config.level
+        * self._config.noise_config.scales.gyro
+    )
+
     gravity = data.site_xmat[self._site_id].T @ jp.array([0, 0, -1])
+    info["rng"], noise_rng = jax.random.split(info["rng"])
+    noisy_gravity = (
+        gravity
+        + (2 * jax.random.uniform(noise_rng, shape=gravity.shape) - 1)
+        * self._config.noise_config.level
+        * self._config.noise_config.scales.gravity
+    )
+
     joint_angles = data.qpos[7:]
+    info["rng"], noise_rng = jax.random.split(info["rng"])
+    noisy_joint_angles = (
+        joint_angles
+        + (2 * jax.random.uniform(noise_rng, shape=joint_angles.shape) - 1)
+        * self._config.noise_config.level
+        * self._config.noise_config.scales.joint_pos
+    )
+
     joint_vel = data.qvel[6:]
+    info["rng"], noise_rng = jax.random.split(info["rng"])
+    noisy_joint_vel = (
+        joint_vel
+        + (2 * jax.random.uniform(noise_rng, shape=joint_vel.shape) - 1)
+        * self._config.noise_config.level
+        * self._config.noise_config.scales.joint_vel
+    )
 
     state = jp.hstack([
-        linvel,
-        gyro,
-        gravity,
+        noisy_gyro,
+        noisy_gravity,
         info["command"],
+        noisy_joint_angles - self._default_pose,
+        noisy_joint_vel,
+        info["last_act"],
+    ])
+
+    # Critic observation ("privileged_state"): accurate signals + sim-only privates.
+    linvel = self.get_local_linvel(data)
+    accelerometer = self.get_accelerometer(data)
+    global_angvel = self.get_global_angvel(data)
+    root_height = data.qpos[2]
+    feet_vel = jp.hstack([
+        mjx_env.get_sensor_data(self.mj_model, data, "left_foot_global_linvel").ravel(),
+        mjx_env.get_sensor_data(self.mj_model, data, "right_foot_global_linvel").ravel(),
+    ])
+    privileged_state = jp.hstack([
+        # Accurate proprioception.
+        gyro,
+        accelerometer,
+        gravity,
+        linvel,
+        global_angvel,
         joint_angles - self._default_pose,
         joint_vel,
-        info["last_act"],
+        # Sim-only signals.
+        root_height[jp.newaxis],
+        data.actuator_force,
         contact.astype(jp.float32),
+        feet_vel,
+        jp.asarray(info.get("feet_air_time", jp.zeros(2))),
     ])
+
     state = jp.nan_to_num(state, nan=0.0, posinf=0.0, neginf=0.0)
     state = jp.clip(state, -1e6, 1e6)
+    privileged_state = jp.nan_to_num(privileged_state, nan=0.0, posinf=0.0, neginf=0.0)
+    privileged_state = jp.clip(privileged_state, -1e6, 1e6)
 
-    return {
-        "state": state
-    }
+    return {"state": state, "privileged_state": privileged_state}
 
-  def _get_reward(self, data: mjx.Data, action: jax.Array, info: dict[str, Any]) -> dict[str, jax.Array]:
+  def _reward_feet_air_time(
+      self,
+      air_time: jax.Array,
+      first_contact: jax.Array,
+      commands: jax.Array,
+      threshold_min: float = 0.2,
+      threshold_max: float = 0.5,
+  ) -> jax.Array:
+    cmd_norm = jp.linalg.norm(commands)
+    air = (air_time - threshold_min) * first_contact
+    air = jp.clip(air, a_min=0.0, a_max=threshold_max - threshold_min)
+    reward = jp.sum(air)
+    return reward * (cmd_norm > 0.01)
+
+  def _get_reward(
+      self,
+      data: mjx.Data,
+      action: jax.Array,
+      info: dict[str, Any],
+      *,
+      first_contact: jax.Array,
+      contact: jax.Array,
+  ) -> dict[str, jax.Array]:
     cmd = info["command"]
-    # Use world-frame sensors for tracking.
-    glin = self.get_global_linvel(data)
-    gang = self.get_global_angvel(data)
-    glin = jp.nan_to_num(glin, nan=0.0, posinf=0.0, neginf=0.0)
-    gang = jp.nan_to_num(gang, nan=0.0, posinf=0.0, neginf=0.0)
+    # Track commands in the IMU-local convention (x forward, z up), same as HERMES.
+    local_linvel = self.get_local_linvel(data)
+    local_angvel = self.get_gyro(data)
+    local_linvel = jp.nan_to_num(local_linvel, nan=0.0, posinf=0.0, neginf=0.0)
+    local_angvel = jp.nan_to_num(local_angvel, nan=0.0, posinf=0.0, neginf=0.0)
 
-    vel_err = jp.sum(jp.square(glin[:2] - cmd[:2]))
-    yaw_err = jp.square(gang[2] - cmd[2])
+    vel_err = jp.sum(jp.square(local_linvel[:2] - cmd[:2]))
+    yaw_err = jp.square(local_angvel[2] - cmd[2])
     tracking_lin = jp.exp(-vel_err / self._config.tracking_sigma)
     tracking_yaw = jp.exp(-yaw_err / self._config.tracking_sigma)
 
@@ -217,10 +315,11 @@ class BaseJoystick(hi_base.HiEnv):
     return {
         "tracking_lin_vel": tracking_lin,
         "tracking_ang_vel": tracking_yaw,
-        "lin_vel_z": jp.square(glin[2]),
-        "ang_vel_xy": jp.sum(jp.square(gang[:2])),
+        "lin_vel_z": jp.square(local_linvel[2]),
+        "ang_vel_xy": jp.sum(jp.square(local_angvel[:2])),
         "orientation": orientation,
         "action_rate": jp.sum(jp.square(action - info["last_act"])),
+        "feet_air_time": self._reward_feet_air_time(info.get("feet_air_time", jp.zeros(2)), first_contact, cmd),
         "alive": jp.array(1.0),
     }
 

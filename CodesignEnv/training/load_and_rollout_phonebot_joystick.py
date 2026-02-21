@@ -70,10 +70,12 @@ def get_ppo_params_for_hi() -> config_dict.ConfigDict:
   """Get PPO hyperparameters, using T1 flat terrain as a reference."""
   try:
     ppo_params = locomotion_params.brax_ppo_config("T1JoystickFlatTerrain")
-    # CodesignEnv joystick env exposes obs dict with key: "state" only.
+    # CodesignEnv joystick env exposes obs dict with keys:
+    # - policy (actor): "state"
+    # - value  (critic): "privileged_state"
     if "network_factory" in ppo_params:
       ppo_params["network_factory"]["policy_obs_key"] = "state"
-      ppo_params["network_factory"]["value_obs_key"] = "state"
+      ppo_params["network_factory"]["value_obs_key"] = "privileged_state"
   except Exception as e:  # pylint: disable=broad-except
     print(f"Warning: failed to load T1 PPO params ({e}), using defaults.")
     ppo_params = config_dict.ConfigDict(
@@ -228,7 +230,13 @@ def rollout_joystick(
   cmd = jp.array(command)
 
   traj = []
-  torso_body_id = getattr(env, "_torso_body_id", 0)
+  torso_body_id = getattr(env, "_torso_body_id", None)
+  if torso_body_id is None:
+    try:
+      torso_body_id = int(env.mj_model.body("base_motor_link").id)
+    except Exception:  # pylint: disable=broad-except
+      torso_body_id = 1
+  imu_site_id = getattr(env, "_site_id", None)
   anim_positions: list[list[float]] = []
   anim_yaws: list[float] = []
 
@@ -245,8 +253,13 @@ def rollout_joystick(
     # Store pose for 2D animation every anim_skip steps.
     if (step % anim_skip) == 0:
       s = state
-      xyz = s.data.xpos[torso_body_id]
-      x_axis = s.data.xmat[torso_body_id, 0]
+      # Use IMU site pose (x-forward convention) when available.
+      if imu_site_id is not None:
+        xyz = s.data.site_xpos[int(imu_site_id)]
+        x_axis = s.data.site_xmat[int(imu_site_id), 0]
+      else:
+        xyz = s.data.xpos[int(torso_body_id)]
+        x_axis = s.data.xmat[int(torso_body_id), 0]
       yaw = -jp.arctan2(x_axis[1], x_axis[0])
       pos = jp.array([xyz[0], xyz[1], yaw], dtype=jp.float32)
       pos_np = np.array(pos)

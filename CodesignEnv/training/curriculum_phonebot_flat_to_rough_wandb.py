@@ -112,11 +112,12 @@ def get_ppo_params_for_phonebot() -> config_dict.ConfigDict:
   """Get PPO hyperparameters, using T1 flat terrain as a reference."""
   try:
     ppo_params = locomotion_params.brax_ppo_config("T1JoystickFlatTerrain")
-    # CodesignEnv joystick env exposes obs dict with key: "state" only.
-    # Some reference configs use value_obs_key="privileged_state"; override to match.
+    # CodesignEnv joystick env exposes obs dict with keys:
+    # - policy (actor): "state"
+    # - value  (critic): "privileged_state"
     if "network_factory" in ppo_params:
       ppo_params["network_factory"]["policy_obs_key"] = "state"
-      ppo_params["network_factory"]["value_obs_key"] = "state"
+      ppo_params["network_factory"]["value_obs_key"] = "privileged_state"
     return ppo_params
   except Exception as e:  # pylint: disable=broad-except
     print(f"Warning: failed to load T1 PPO params ({e}), using defaults.")
