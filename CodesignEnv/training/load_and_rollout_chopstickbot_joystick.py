@@ -12,6 +12,7 @@ import os
 import sys
 import functools
 from datetime import datetime
+import re
 
 # ---------------------------------------------------------------------------
 # Environment / import setup
@@ -204,12 +205,53 @@ def rollout_joystick(
     show_contact: bool = False,
 ):
   """Generate rollout video with joystick commands."""
-  policy = jax.jit(make_inference_fn(params, deterministic=True))
+  policy_raw = make_inference_fn(params, deterministic=True)
   jit_reset = jax.jit(env.reset)
   jit_step = jax.jit(env.step)
 
   rng = jax.random.PRNGKey(0)
   state = jit_reset(rng)
+
+  # -------------------------------------------------------------------------
+  # Backward compatibility: old checkpoints may have a different policy obs dim.
+  # See PhoneBot rollout script for details.
+  # -------------------------------------------------------------------------
+  def _adapt_state_obs(obs: dict, target_dim: int) -> dict:
+    x = obs.get("state")
+    if x is None:
+      return obs
+    cur = int(x.shape[-1])
+    if cur == int(target_dim):
+      return obs
+    if cur > int(target_dim):
+      x2 = x[..., : int(target_dim)]
+    else:
+      pad = int(target_dim) - cur
+      x2 = jp.pad(x, ((0, pad),))
+    out = dict(obs)
+    out["state"] = x2
+    return out
+
+  expected_dim = int(state.obs["state"].shape[-1])
+  try:
+    _ = policy_raw(state.obs, rng)
+  except TypeError as e:
+    msg = str(e)
+    m = re.search(r"broadcasting: \\((\\d+),\\), \\((\\d+),\\)", msg)
+    if m:
+      a = int(m.group(1))
+      b = int(m.group(2))
+      cur = expected_dim
+      expected_dim = b if a == cur else (a if b == cur else min(a, b))
+      print(
+          f"[ROLLOUT] Warning: checkpoint expects state dim {expected_dim} "
+          f"but env provides {cur}. Slicing/padding obs['state'] for rollout. "
+          "Retrain to use new obs features."
+      )
+    else:
+      raise
+
+  policy = jax.jit(lambda obs, key: policy_raw(_adapt_state_obs(obs, expected_dim), key))
 
   # Optionally set initial (x, y, yaw) pose before rollout.
   if start_pose is not None:
