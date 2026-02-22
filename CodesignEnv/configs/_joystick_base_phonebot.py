@@ -30,7 +30,7 @@ def default_config() -> config_dict.ConfigDict:
       action_scale=1.0,
       tracking_sigma=0.25,
       noise_config=config_dict.create(
-          level=0.2,
+          level=0.4,
           scales=config_dict.create(
               # joint_pos=0.0,
               # joint_vel=0.0,
@@ -55,9 +55,13 @@ def default_config() -> config_dict.ConfigDict:
               torques=0.0,
               energy=0.0,
               action_rate=-0.01,
-              dof_acc=0.0,
-              dof_vel=0.0,
-              feet_air_time=30.0,
+              # dof_acc=0.0,
+              # dof_acc=-0.00000001,
+              dof_acc=-0.000004,
+              # dof_vel=0.0,
+              # dof_vel=-0.00001,
+              dof_vel=-0.0001,
+              feet_air_time=20.0,
               # Foot-related costs (tune later).
               feet_clearance=-0.05,
               foot_collision=-1.0,
@@ -65,26 +69,27 @@ def default_config() -> config_dict.ConfigDict:
               joint_deviation_knee=-0.1,
               joint_deviation_hip=-0.1,
               dof_pos_limits=-1.0,
-              pose=-1.0,
+              pose=-0.25,
+              # pose=-1.0,
               feet_distance=-1.0,
               # feet_air_time=50.0,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
-              feet_height=-2.5, # it should be negative , since it is penalty !!!!! 
+              feet_height=-5.0, # it should be negative , since it is penalty !!!!! 
               
               # feet_air_time=20.0,
               # feet_air_time=5.0,
               alive=0.5,
           ),
           # Reference swing peak height (meters) for foot-height cost.
-          max_foot_height=0.05,
+          max_foot_height=0.06,
           # max_foot_height=0.20,
       ),
       push_config=config_dict.create(
           enable=True,
           # enable=False,
           interval_range=[5.0, 10.0],
-          magnitude_range=[0.01, 0.05], # add small push to the robot
+          magnitude_range=[0.05, 0.2], # add small push to the robot
           # magnitude_range=[0.1, 1.0],
       ),
       # lin_vel_x=[-1.0, 1.0],

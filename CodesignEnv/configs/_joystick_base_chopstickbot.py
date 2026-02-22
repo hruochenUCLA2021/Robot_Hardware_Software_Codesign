@@ -30,7 +30,7 @@ def default_config() -> config_dict.ConfigDict:
       action_scale=1.0,
       tracking_sigma=0.25,
       noise_config=config_dict.create(
-          level=0.5,
+          level=0.6,
           scales=config_dict.create(
               # joint_pos=0.0,
               # joint_vel=0.0,
@@ -80,7 +80,7 @@ def default_config() -> config_dict.ConfigDict:
           enable=True,
           # enable=False,
           interval_range=[5.0, 10.0],
-          magnitude_range=[0.01, 0.05], # add small push to the robot
+          magnitude_range=[0.05, 0.15], # add small push to the robot
           # magnitude_range=[0.1, 1.0],
       ),
       # lin_vel_x=[-1.0, 1.0],
