@@ -53,10 +53,17 @@ def default_config() -> config_dict.ConfigDict:
               orientation=-1.0,
               action_rate=-0.01,
               feet_air_time=50.0,
+              # HERMES-style swing-peak based foot height penalty.
+              # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
+              feet_height=-2.5, # it should be negative , since it is penalty !!!!! 
+              
               # feet_air_time=20.0,
               # feet_air_time=5.0,
               alive=0.5,
           ),
+          # Reference swing peak height (meters) for foot-height cost.
+          max_foot_height=0.05,
+          # max_foot_height=0.20,
       ),
       push_config=config_dict.create(
           enable=True,
@@ -169,6 +176,8 @@ class BaseJoystick(hi_base.HiEnv):
         # Privileged-only signals.
         "feet_air_time": jp.zeros(2),
         "last_contact": jp.zeros(2, dtype=bool),
+        # Swing peak (used by foot-height cost; HERMES NoLinearVel style).
+        "swing_peak": jp.zeros(2),
         # Phase (gait clock).
         "phase_dt": phase_dt,
         "phase": phase,
@@ -178,6 +187,7 @@ class BaseJoystick(hi_base.HiEnv):
         "push_interval_steps": push_interval_steps,
     }
     metrics = {f"reward/{k}": jp.zeros(()) for k in self._config.reward_config.scales.keys()}
+    metrics["swing_peak"] = jp.zeros(())
     obs = self._get_obs(data, info, contact)
     reward, done = jp.zeros(2)
     return mjx_env.State(data, obs, reward, done, metrics, info)
@@ -220,6 +230,11 @@ class BaseJoystick(hi_base.HiEnv):
     first_contact = (state.info["feet_air_time"] > 0.0) * contact_filt
     state.info["feet_air_time"] = state.info["feet_air_time"] + self.dt
 
+    # Track swing peak (max foot height since last contact), HERMES-style.
+    foot_pos = data.site_xpos[self._feet_site_id]
+    foot_z = foot_pos[..., -1]
+    state.info["swing_peak"] = jp.maximum(state.info["swing_peak"], foot_z)
+
     obs = self._get_obs(data, state.info, contact)
     done = self._get_termination(data)
 
@@ -236,6 +251,7 @@ class BaseJoystick(hi_base.HiEnv):
     # Reset air-time to 0 for feet that are in contact, like HERMES.
     state.info["feet_air_time"] = state.info["feet_air_time"] * (~contact)
     state.info["last_contact"] = contact
+    state.info["swing_peak"] = state.info["swing_peak"] * (~contact)
 
     # Update gait phase (HERMES-style). When command is ~0, hold phase at pi.
     phase_tp1 = state.info["phase"] + state.info["phase_dt"]
@@ -253,6 +269,7 @@ class BaseJoystick(hi_base.HiEnv):
 
     for k, v in rewards.items():
       state.metrics[f"reward/{k}"] = v
+    state.metrics["swing_peak"] = jp.mean(state.info["swing_peak"])
 
     # If state ever becomes non-finite, terminate the episode.
     nonfinite = (~jp.all(jp.isfinite(data.qpos))) | (~jp.all(jp.isfinite(data.qvel)))
@@ -388,6 +405,17 @@ class BaseJoystick(hi_base.HiEnv):
     reward = jp.sum(air)
     return reward * (cmd_norm > 0.01)
 
+  def _cost_feet_height(
+      self,
+      swing_peak: jax.Array,
+      first_contact: jax.Array,
+  ) -> jax.Array:
+    # HERMES NoLinearVel: penalize deviation of swing peak from a target height,
+    # applied only on first contact.
+    first_contact = jp.asarray(first_contact, dtype=jp.float32)
+    error = swing_peak / self._config.reward_config.max_foot_height - 1.0
+    return jp.sum(jp.square(error) * first_contact)
+
   def _get_reward(
       self,
       data: mjx.Data,
@@ -420,6 +448,7 @@ class BaseJoystick(hi_base.HiEnv):
         "orientation": orientation,
         "action_rate": jp.sum(jp.square(action - info["last_act"])),
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
+        "feet_height": self._cost_feet_height(info["swing_peak"], first_contact),
         "alive": jp.array(1.0),
     }
 
