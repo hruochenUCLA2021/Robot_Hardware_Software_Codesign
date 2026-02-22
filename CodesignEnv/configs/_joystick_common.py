@@ -144,6 +144,16 @@ class BaseJoystick(hi_base.HiEnv):
     rng, cmd_rng = jax.random.split(rng)
     cmd = self.sample_command(cmd_rng)
 
+    # Sample push interval (HERMES-style).
+    rng, push_rng = jax.random.split(rng)
+    push_cfg = self._config.push_config
+    push_interval = jax.random.uniform(
+        push_rng,
+        minval=push_cfg.interval_range[0],
+        maxval=push_cfg.interval_range[1],
+    )
+    push_interval_steps = jp.round(push_interval / self.dt).astype(jp.int32)
+
     data = mjx_env.init(self.mjx_model, qpos=qpos, qvel=qvel, ctrl=self._default_pose)
 
     left_contact = jp.any(jp.array([geoms_colliding(data, gid, self._floor_geom_id) for gid in self._left_feet_geom_id]))
@@ -161,6 +171,10 @@ class BaseJoystick(hi_base.HiEnv):
         # Phase (gait clock).
         "phase_dt": phase_dt,
         "phase": phase,
+        # Push related.
+        "push": jp.array([0.0, 0.0], dtype=jp.float32),
+        "push_step": jp.asarray(0, dtype=jp.int32),
+        "push_interval_steps": push_interval_steps,
     }
     metrics = {f"reward/{k}": jp.zeros(()) for k in self._config.reward_config.scales.keys()}
     obs = self._get_obs(data, info, contact)
@@ -168,8 +182,32 @@ class BaseJoystick(hi_base.HiEnv):
     return mjx_env.State(data, obs, reward, done, metrics, info)
 
   def step(self, state: mjx_env.State, action: jax.Array) -> mjx_env.State:
+    # Push disturbance (HERMES-style): inject small random XY velocity at intervals.
+    state.info["rng"], push1_rng, push2_rng = jax.random.split(state.info["rng"], 3)
+    push_theta = jax.random.uniform(push1_rng, maxval=2 * jp.pi)
+    push_magnitude = jax.random.uniform(
+        push2_rng,
+        minval=self._config.push_config.magnitude_range[0],
+        maxval=self._config.push_config.magnitude_range[1],
+    )
+    push = jp.array([jp.cos(push_theta), jp.sin(push_theta)], dtype=jp.float32)
+    push *= (
+        jp.mod(state.info["push_step"] + 1, state.info["push_interval_steps"]) == 0
+    )
+    push *= self._config.push_config.enable
+    state.info["push"] = push
+
+    qvel0 = state.data.qvel
+    qvel0 = qvel0.at[:2].set(push * push_magnitude + qvel0[:2])
+    data0 = state.data.replace(qvel=qvel0)
+    state = state.replace(data=data0)
+
     # Clamp targets inside soft joint range.
-    motor_targets = jp.clip(self._default_pose + action * self._config.action_scale, self._soft_lowers, self._soft_uppers)
+    motor_targets = jp.clip(
+        self._default_pose + action * self._config.action_scale,
+        self._soft_lowers,
+        self._soft_uppers,
+    )
     data = mjx_env.step(self.mjx_model, state.data, motor_targets, self.n_substeps)
 
     left_contact = jp.any(jp.array([geoms_colliding(data, gid, self._floor_geom_id) for gid in self._left_feet_geom_id]))
@@ -192,6 +230,7 @@ class BaseJoystick(hi_base.HiEnv):
     reward = jp.clip(total * self.dt, 0.0, 1e6)
 
     state.info["step"] += 1
+    state.info["push_step"] += 1
     state.info["last_act"] = action
     # Reset air-time to 0 for feet that are in contact, like HERMES.
     state.info["feet_air_time"] = state.info["feet_air_time"] * (~contact)
