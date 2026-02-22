@@ -19,39 +19,39 @@ rollouts:
   # Forward walking
   - name: flat_forward_track
     out: phonebot_flat_forward_track.mp4
-    command: [1.0, 0.0, 0.0]
+    command: [0.5, 0.0, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_forward_fixed
     out: phonebot_flat_forward_fixed.mp4
-    command: [1.0, 0.0, 0.0]
+    command: [0.5, 0.0, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 
   # Sideways walking
   - name: flat_side_track
     out: phonebot_flat_side_track.mp4
-    command: [0.0, 0.5, 0.0]
+    command: [0.0, 0.25, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_side_fixed
     out: phonebot_flat_side_fixed.mp4
-    command: [0.0, 0.5, 0.0]
+    command: [0.0, 0.25, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 
   # Turn in place
   - name: flat_turn_track
     out: phonebot_flat_turn_track.mp4
-    command: [0.0, 0.0, 1.5]
+    command: [0.0, 0.0, 0.75]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_turn_fixed
     out: phonebot_flat_turn_fixed.mp4
-    command: [0.0, 0.0, 1.5]
+    command: [0.0, 0.0, 0.75]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 

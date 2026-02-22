@@ -47,7 +47,8 @@ def default_config() -> config_dict.ConfigDict:
               ang_vel_xy=-0.1,
               orientation=-1.0,
               action_rate=-0.01,
-              feet_air_time=5.0,
+              feet_air_time=20.0,
+              # feet_air_time=5.0,
               alive=0.5,
           ),
       ),
@@ -56,8 +57,12 @@ def default_config() -> config_dict.ConfigDict:
           interval_range=[5.0, 10.0],
           magnitude_range=[0.1, 1.0],
       ),
-      lin_vel_x=[-1.0, 1.0],
-      lin_vel_y=[-0.5, 0.5],
+      # lin_vel_x=[-1.0, 1.0],
+      # lin_vel_y=[-0.5, 0.5],
+      # ang_vel_yaw=[-1.0, 1.0],
+
+      lin_vel_x=[-0.5, 0.5],
+      lin_vel_y=[-0.25, 0.25],
       ang_vel_yaw=[-1.0, 1.0],
   )
 
