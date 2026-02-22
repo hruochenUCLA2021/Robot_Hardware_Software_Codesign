@@ -435,7 +435,8 @@ class BaseJoystick(hi_base.HiEnv):
     return jp.sum(jp.abs(torques))
 
   def _cost_energy(self, qvel: jax.Array, actuator_force: jax.Array) -> jax.Array:
-    n = jp.minimum(qvel.shape[0], actuator_force.shape[0])
+    # IMPORTANT: must be a Python int for slicing under `jax.jit`.
+    n = min(qvel.shape[0], actuator_force.shape[0])
     return jp.sum(jp.abs(qvel[:n] * actuator_force[:n]))
 
   def _cost_dof_acc(self, qacc: jax.Array) -> jax.Array:
