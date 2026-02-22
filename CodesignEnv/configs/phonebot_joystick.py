@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional, Union
 from ml_collections import config_dict
 
 from . import hi_constants as consts
-from ._joystick_common import BaseJoystick, default_config as _default_config
+from ._joystick_base_phonebot import BaseJoystick, default_config as _default_config
 
 
 def default_config() -> config_dict.ConfigDict:
