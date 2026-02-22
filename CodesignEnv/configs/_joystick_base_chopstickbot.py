@@ -53,6 +53,11 @@ def default_config() -> config_dict.ConfigDict:
               orientation=-1.0,
               action_rate=-0.01,
               feet_air_time=50.0,
+              # Collision penalties (small by default; tune later).
+              foot_collision=-1.0,
+              # foot_collision=-0.1,
+              bar_collision=-1.0,
+              # bar_collision=-0.1,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
               feet_height=-2.5, # it should be negative , since it is penalty !!!!! 
@@ -116,6 +121,9 @@ class BaseJoystick(hi_base.HiEnv):
     self._floor_geom_id = self._mj_model.geom("floor").id
     self._left_foot_geom_id = self._mj_model.geom("left_foot").id
     self._right_foot_geom_id = self._mj_model.geom("right_foot").id
+    # Chopstick bars (visual cylinders) collide only with each other.
+    self._left_bar_geom_id = self._mj_model.geom("left_bar").id
+    self._right_bar_geom_id = self._mj_model.geom("right_bar").id
     self._left_feet_geom_id = [self._left_foot_geom_id]
     self._right_feet_geom_id = [self._right_foot_geom_id]
     self._feet_site_id = np.array([
@@ -416,6 +424,20 @@ class BaseJoystick(hi_base.HiEnv):
     error = swing_peak / self._config.reward_config.max_foot_height - 1.0
     return jp.sum(jp.square(error) * first_contact)
 
+  def _cost_foot_collision(self, data: mjx.Data) -> jax.Array:
+    # Tip box vs tip box collision.
+    return jp.asarray(
+        geoms_colliding(data, self._left_foot_geom_id, self._right_foot_geom_id),
+        dtype=jp.float32,
+    )
+
+  def _cost_bar_collision(self, data: mjx.Data) -> jax.Array:
+    # Bar cylinder vs bar cylinder collision.
+    return jp.asarray(
+        geoms_colliding(data, self._left_bar_geom_id, self._right_bar_geom_id),
+        dtype=jp.float32,
+    )
+
   def _get_reward(
       self,
       data: mjx.Data,
@@ -448,6 +470,8 @@ class BaseJoystick(hi_base.HiEnv):
         "orientation": orientation,
         "action_rate": jp.sum(jp.square(action - info["last_act"])),
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
+        "foot_collision": self._cost_foot_collision(data),
+        "bar_collision": self._cost_bar_collision(data),
         "feet_height": self._cost_feet_height(info["swing_peak"], first_contact),
         "alive": jp.array(1.0),
     }
