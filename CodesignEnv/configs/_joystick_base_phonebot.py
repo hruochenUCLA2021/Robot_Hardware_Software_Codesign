@@ -57,7 +57,10 @@ def default_config() -> config_dict.ConfigDict:
               action_rate=-0.01,
               dof_acc=0.0,
               dof_vel=0.0,
-              feet_air_time=35.0,
+              feet_air_time=30.0,
+              # Foot-related costs (tune later).
+              feet_clearance=-0.05,
+              foot_collision=-1.0,
               # feet_air_time=50.0,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
@@ -437,6 +440,30 @@ class BaseJoystick(hi_base.HiEnv):
   def _cost_dof_vel(self, qvel: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qvel))
 
+  def _cost_feet_clearance(self, data: mjx.Data) -> jax.Array:
+    # HERMES-style: penalize deviation from target foot height during swing,
+    # weighted by horizontal foot speed.
+    feet_vel = jp.stack(
+        [
+            mjx_env.get_sensor_data(self.mj_model, data, "left_foot_global_linvel").ravel(),
+            mjx_env.get_sensor_data(self.mj_model, data, "right_foot_global_linvel").ravel(),
+        ],
+        axis=0,
+    )
+    vel_xy = feet_vel[..., :2]
+    vel_norm = jp.sqrt(jp.linalg.norm(vel_xy, axis=-1))
+    foot_pos = data.site_xpos[self._feet_site_id]
+    foot_z = foot_pos[..., -1]
+    delta = jp.abs(foot_z - self._config.reward_config.max_foot_height)
+    return jp.sum(delta * vel_norm)
+
+  def _cost_foot_collision(self, data: mjx.Data) -> jax.Array:
+    # Foot tip vs foot tip collision (proxy for self-collision).
+    return jp.asarray(
+        geoms_colliding(data, self._left_foot_geom_id, self._right_foot_geom_id),
+        dtype=jp.float32,
+    )
+
   def _get_reward(
       self,
       data: mjx.Data,
@@ -469,6 +496,8 @@ class BaseJoystick(hi_base.HiEnv):
     energy_cost = self._cost_energy(joint_qvel, data.actuator_force)
     dof_acc_cost = self._cost_dof_acc(joint_qacc)
     dof_vel_cost = self._cost_dof_vel(joint_qvel)
+    feet_clearance_cost = self._cost_feet_clearance(data)
+    foot_collision_cost = self._cost_foot_collision(data)
 
     return {
         "tracking_lin_vel": tracking_lin,
@@ -482,6 +511,8 @@ class BaseJoystick(hi_base.HiEnv):
         "dof_acc": dof_acc_cost,
         "dof_vel": dof_vel_cost,
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
+        "feet_clearance": feet_clearance_cost,
+        "foot_collision": foot_collision_cost,
         "feet_height": self._cost_feet_height(info["swing_peak"], first_contact),
         "alive": jp.array(1.0),
     }
