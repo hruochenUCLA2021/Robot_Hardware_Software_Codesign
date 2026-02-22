@@ -57,7 +57,8 @@ def default_config() -> config_dict.ConfigDict:
               action_rate=-0.01,
               dof_acc=0.0,
               dof_vel=0.0,
-              feet_air_time=50.0,
+              feet_air_time=35.0,
+              # feet_air_time=50.0,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
               feet_height=-2.5, # it should be negative , since it is penalty !!!!! 
