@@ -30,7 +30,7 @@ def default_config() -> config_dict.ConfigDict:
       action_scale=1.0,
       tracking_sigma=0.25,
       noise_config=config_dict.create(
-          level=0.2,
+          level=0.5,
           scales=config_dict.create(
               # joint_pos=0.0,
               # joint_vel=0.0,
@@ -52,7 +52,7 @@ def default_config() -> config_dict.ConfigDict:
               ang_vel_xy=-0.1,
               orientation=-1.0,
               action_rate=-0.01,
-              feet_air_time=50.0,
+              feet_air_time=25.0,
               # Collision penalties (small by default; tune later).
               foot_collision=-1.0,
               # foot_collision=-0.1,
@@ -60,14 +60,14 @@ def default_config() -> config_dict.ConfigDict:
               # bar_collision=-0.1,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
-              feet_height=-2.5, # it should be negative , since it is penalty !!!!! 
+              feet_height=-0.15, # it should be negative , since it is penalty !!!!! 
               
               # feet_air_time=20.0,
               # feet_air_time=5.0,
               alive=0.5,
           ),
           # Reference swing peak height (meters) for foot-height cost.
-          max_foot_height=0.05,
+          max_foot_height=0.03,
           # max_foot_height=0.20,
       ),
       push_config=config_dict.create(
