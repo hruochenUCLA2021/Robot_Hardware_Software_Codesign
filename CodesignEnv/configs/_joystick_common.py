@@ -30,13 +30,18 @@ def default_config() -> config_dict.ConfigDict:
       action_scale=1.0,
       tracking_sigma=0.25,
       noise_config=config_dict.create(
-          level=0.0,
+          level=0.2,
           scales=config_dict.create(
-              joint_pos=0.0,
-              joint_vel=0.0,
-              gravity=0.0,
-              linvel=0.0,
-              gyro=0.0,
+              # joint_pos=0.0,
+              # joint_vel=0.0,
+              # gravity=0.0,
+              # linvel=0.0,
+              # gyro=0.0,
+              joint_pos=0.03,
+              joint_vel=1.5,
+              gravity=0.05,
+              linvel=0.1,
+              gyro=0.2,
           ),
       ),
       reward_config=config_dict.create(
@@ -53,9 +58,11 @@ def default_config() -> config_dict.ConfigDict:
           ),
       ),
       push_config=config_dict.create(
-          enable=False,
+          enable=True,
+          # enable=False,
           interval_range=[5.0, 10.0],
-          magnitude_range=[0.1, 1.0],
+          magnitude_range=[0.01, 0.05], # add small push to the robot
+          # magnitude_range=[0.1, 1.0],
       ),
       # lin_vel_x=[-1.0, 1.0],
       # lin_vel_y=[-0.5, 0.5],
