@@ -51,7 +51,12 @@ def default_config() -> config_dict.ConfigDict:
               lin_vel_z=-0.2,
               ang_vel_xy=-0.1,
               orientation=-1.0,
+              # Energy-related penalties (HERMES style). Keep 0 by default; tune later.
+              torques=0.0,
+              energy=0.0,
               action_rate=-0.01,
+              dof_acc=0.0,
+              dof_vel=0.0,
               feet_air_time=50.0,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
@@ -416,6 +421,20 @@ class BaseJoystick(hi_base.HiEnv):
     error = swing_peak / self._config.reward_config.max_foot_height - 1.0
     return jp.sum(jp.square(error) * first_contact)
 
+  # Energy related costs (HERMES NoLinearVel style).
+  def _cost_torques(self, torques: jax.Array) -> jax.Array:
+    return jp.sum(jp.abs(torques))
+
+  def _cost_energy(self, qvel: jax.Array, actuator_force: jax.Array) -> jax.Array:
+    n = jp.minimum(qvel.shape[0], actuator_force.shape[0])
+    return jp.sum(jp.abs(qvel[:n] * actuator_force[:n]))
+
+  def _cost_dof_acc(self, qacc: jax.Array) -> jax.Array:
+    return jp.sum(jp.square(qacc))
+
+  def _cost_dof_vel(self, qvel: jax.Array) -> jax.Array:
+    return jp.sum(jp.square(qvel))
+
   def _get_reward(
       self,
       data: mjx.Data,
@@ -440,13 +459,26 @@ class BaseJoystick(hi_base.HiEnv):
     gravity = self.get_gravity(data)
     orientation = jp.sum(jp.square(gravity[:2]))
 
+    # Energy-related costs (non-root DOFs).
+    joint_qvel = data.qvel[6:]
+    joint_qacc = getattr(data, "qacc", None)
+    joint_qacc = jp.zeros_like(joint_qvel) if joint_qacc is None else joint_qacc[6:]
+    torques_cost = self._cost_torques(data.actuator_force)
+    energy_cost = self._cost_energy(joint_qvel, data.actuator_force)
+    dof_acc_cost = self._cost_dof_acc(joint_qacc)
+    dof_vel_cost = self._cost_dof_vel(joint_qvel)
+
     return {
         "tracking_lin_vel": tracking_lin,
         "tracking_ang_vel": tracking_yaw,
         "lin_vel_z": jp.square(local_linvel[2]),
         "ang_vel_xy": jp.sum(jp.square(local_angvel[:2])),
         "orientation": orientation,
+        "torques": torques_cost,
+        "energy": energy_cost,
         "action_rate": jp.sum(jp.square(action - info["last_act"])),
+        "dof_acc": dof_acc_cost,
+        "dof_vel": dof_vel_cost,
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
         "feet_height": self._cost_feet_height(info["swing_peak"], first_contact),
         "alive": jp.array(1.0),
