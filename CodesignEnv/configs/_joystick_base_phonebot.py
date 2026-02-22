@@ -61,6 +61,12 @@ def default_config() -> config_dict.ConfigDict:
               # Foot-related costs (tune later).
               feet_clearance=-0.05,
               foot_collision=-1.0,
+              # Pose related rewards (HERMES NoLinearVel style).
+              joint_deviation_knee=-0.1,
+              joint_deviation_hip=-0.1,
+              dof_pos_limits=-1.0,
+              pose=-1.0,
+              feet_distance=-1.0,
               # feet_air_time=50.0,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
@@ -140,6 +146,26 @@ class BaseJoystick(hi_base.HiEnv):
     except Exception:  # pylint: disable=broad-except
       # Fallback: body 1 is typically the first real body (0 is world).
       self._torso_body_id = 1
+
+    # Pose-related indices + weights (HERMES NoLinearVel style).
+    # Hip indices: use hip roll joints.
+    self._hip_indices = jp.array(
+        [
+            self._mj_model.joint("l_hip_roll_joint").qposadr - 7,
+            self._mj_model.joint("r_hip_roll_joint").qposadr - 7,
+        ],
+        dtype=jp.int32,
+    )
+    # Knee indices: use calf joints.
+    self._knee_indices = jp.array(
+        [
+            self._mj_model.joint("l_hip_calf_joint").qposadr - 7,
+            self._mj_model.joint("r_hip_calf_joint").qposadr - 7,
+        ],
+        dtype=jp.int32,
+    )
+    # Weights for pose cost: equal weights for all DOFs.
+    self._weights = jp.ones((self._n_dof,), dtype=jp.float32)
 
   def sample_command(self, rng: jax.Array) -> jax.Array:
     rng, k1, k2, k3 = jax.random.split(rng, 4)
@@ -440,6 +466,34 @@ class BaseJoystick(hi_base.HiEnv):
   def _cost_dof_vel(self, qvel: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qvel))
 
+  # Pose-related costs (HERMES NoLinearVel style).
+  def _cost_joint_pos_limits(self, qpos: jax.Array) -> jax.Array:
+    out_of_limits = -jp.clip(qpos - self._soft_lowers, None, 0.0)
+    out_of_limits += jp.clip(qpos - self._soft_uppers, 0.0, None)
+    return jp.sum(out_of_limits)
+
+  def _cost_joint_deviation_hip(self, qpos: jax.Array, cmd: jax.Array) -> jax.Array:
+    cost = jp.sum(jp.abs(qpos[self._hip_indices] - self._default_pose[self._hip_indices]))
+    cost *= jp.abs(cmd[1]) > 0.1
+    return cost
+
+  def _cost_joint_deviation_knee(self, qpos: jax.Array) -> jax.Array:
+    return jp.sum(jp.abs(qpos[self._knee_indices] - self._default_pose[self._knee_indices]))
+
+  def _cost_pose(self, qpos: jax.Array) -> jax.Array:
+    return jp.sum(jp.square(qpos - self._default_pose) * self._weights)
+
+  def _cost_feet_distance(self, data: mjx.Data) -> jax.Array:
+    left_foot_pos = data.site_xpos[self._feet_site_id[0]]
+    right_foot_pos = data.site_xpos[self._feet_site_id[1]]
+    base_xmat = data.site_xmat[self._site_id]
+    base_yaw = jp.arctan2(base_xmat[1, 0], base_xmat[0, 0])
+    feet_distance = jp.abs(
+        jp.cos(base_yaw) * (left_foot_pos[1] - right_foot_pos[1])
+        - jp.sin(base_yaw) * (left_foot_pos[0] - right_foot_pos[0])
+    )
+    return jp.clip(0.2 - feet_distance, 0.0, 0.1)
+
   def _cost_feet_clearance(self, data: mjx.Data) -> jax.Array:
     # HERMES-style: penalize deviation from target foot height during swing,
     # weighted by horizontal foot speed.
@@ -498,6 +552,13 @@ class BaseJoystick(hi_base.HiEnv):
     dof_vel_cost = self._cost_dof_vel(joint_qvel)
     feet_clearance_cost = self._cost_feet_clearance(data)
     foot_collision_cost = self._cost_foot_collision(data)
+    # Pose-related costs.
+    qpos_j = data.qpos[7:]
+    joint_deviation_hip_cost = self._cost_joint_deviation_hip(qpos_j, cmd)
+    joint_deviation_knee_cost = self._cost_joint_deviation_knee(qpos_j)
+    joint_pos_limits_cost = self._cost_joint_pos_limits(qpos_j)
+    pose_cost = self._cost_pose(qpos_j)
+    feet_distance_cost = self._cost_feet_distance(data)
 
     return {
         "tracking_lin_vel": tracking_lin,
@@ -513,6 +574,11 @@ class BaseJoystick(hi_base.HiEnv):
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
         "feet_clearance": feet_clearance_cost,
         "foot_collision": foot_collision_cost,
+        "joint_deviation_knee": joint_deviation_knee_cost,
+        "joint_deviation_hip": joint_deviation_hip_cost,
+        "dof_pos_limits": joint_pos_limits_cost,
+        "pose": pose_cost,
+        "feet_distance": feet_distance_cost,
         "feet_height": self._cost_feet_height(info["swing_peak"], first_contact),
         "alive": jp.array(1.0),
     }
