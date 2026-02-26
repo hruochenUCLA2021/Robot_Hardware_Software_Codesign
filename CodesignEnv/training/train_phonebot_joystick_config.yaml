@@ -11,6 +11,13 @@ environment:
   ## Optional: path to a YAML file with env config overrides (e.g. reward
   ## scales, push_config, etc.). If null, the built-in defaults are used.
   env_config_path: null
+  ## If true, use the registry envs that load the *_alternative_imu scene XMLs:
+  ##   - PhonebotJoystickFlatTerrainAlter
+  ##   - PhonebotJoystickRoughTerrainAlter
+  use_alternative_imu: false
+  ## Optional explicit overrides (if provided, take precedence over use_alternative_imu):
+  ## env_name_flat: PhonebotJoystickFlatTerrain
+  ## env_name_rough: PhonebotJoystickRoughTerrain
 
 wandb:
   ## WANDB_API_KEY: if non-empty, overrides any existing env var.

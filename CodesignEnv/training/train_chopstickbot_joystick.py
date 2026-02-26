@@ -65,6 +65,13 @@ def main():
   # merges it into the base joystick ConfigDict for each stage.
   env_section = cfg.get("environment", {}) or {}
   env_cfg_path = env_section.get("env_config_path")
+  use_alt_imu = bool(env_section.get("use_alternative_imu", False))
+  env_name_flat = env_section.get("env_name_flat")
+  env_name_rough = env_section.get("env_name_rough")
+  if not env_name_flat:
+    env_name_flat = "ChopstickbotJoystickFlatTerrainAlter" if use_alt_imu else "ChopstickbotJoystickFlatTerrain"
+  if not env_name_rough:
+    env_name_rough = "ChopstickbotJoystickRoughTerrainAlter" if use_alt_imu else "ChopstickbotJoystickRoughTerrain"
 
   # Set W&B API key if provided.
   wandb_cfg = cfg.get("wandb", {}) or {}
@@ -84,7 +91,7 @@ def main():
     restore = epath.Path(ckpt) if ckpt else None
 
     curriculum_trainer.train_stage(
-        env_name="ChopstickbotJoystickFlatTerrain",
+        env_name=str(env_name_flat),
         stage_name="flat",
         num_timesteps=num_timesteps,
         num_evals=int(flat_cfg.get("num_evals", 10)),
@@ -101,7 +108,7 @@ def main():
     restore = epath.Path(ckpt) if ckpt else None
 
     curriculum_trainer.train_stage(
-        env_name="ChopstickbotJoystickRoughTerrain",
+        env_name=str(env_name_rough),
         stage_name="rough",
         num_timesteps=num_timesteps,
         num_evals=int(rough_cfg.get("num_evals", 10)),
@@ -123,7 +130,7 @@ def main():
 
     # Stage 1: flat terrain.
     flat_final_ckpt = curriculum_trainer.train_stage(
-        env_name="ChopstickbotJoystickFlatTerrain",
+        env_name=str(env_name_flat),
         stage_name="flat",
         num_timesteps=flat_num,
         num_evals=flat_evals,
@@ -146,7 +153,7 @@ def main():
 
     # Stage 2: rough terrain.
     curriculum_trainer.train_stage(
-        env_name="ChopstickbotJoystickRoughTerrain",
+        env_name=str(env_name_rough),
         stage_name="rough",
         num_timesteps=rough_num,
         num_evals=rough_evals,

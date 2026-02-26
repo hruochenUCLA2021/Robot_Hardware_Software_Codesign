@@ -190,12 +190,15 @@ def train_stage(
   # Separate training and evaluation environments.
   # Explicitly choose the joystick task based on env_name so that the correct
   # scene XML is used for each curriculum stage.
-  if env_name.endswith("FlatTerrain"):
+  is_alt = "Alter" in env_name
+  if "FlatTerrain" in env_name:
     task = "flat_terrain"
-  elif env_name.endswith("RoughTerrain"):
+  elif "RoughTerrain" in env_name:
     task = "rough_terrain"
   else:
     raise ValueError(f"Unexpected env_name for joystick stage: {env_name}")
+  if is_alt:
+    task = f"{task}_alternative_imu"
 
   env = EnvClass(task=task, config=env_cfg)
   eval_env = EnvClass(task=task, config=env_cfg)

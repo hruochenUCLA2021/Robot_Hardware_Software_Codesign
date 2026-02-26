@@ -147,12 +147,15 @@ def load_policy_from_checkpoint(
 
   # For joystick environments, explicitly choose the task so that we load the
   # correct scene XML (flat vs rough). Other envs keep their own defaults.
-  if env_name.endswith("FlatTerrain"):
+  is_alt = "Alter" in env_name
+  if "FlatTerrain" in env_name:
     task = "flat_terrain"
-  elif env_name.endswith("RoughTerrain"):
+  elif "RoughTerrain" in env_name:
     task = "rough_terrain"
   else:
     raise ValueError(f"Unexpected env_name for joystick rollout: {env_name}")
+  if is_alt:
+    task = f"{task}_alternative_imu"
 
   env = EnvClass(task=task, config=env_cfg)
 

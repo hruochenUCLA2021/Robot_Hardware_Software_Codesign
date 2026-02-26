@@ -27,9 +27,21 @@ CHOPSTICKBOT_XML_ROOT = MODELS_ROOT / "model_chopstickbot"
 
 PHONEBOT_JOYSTICK_FLAT_TERRAIN_XML = PHONEBOT_XML_ROOT / "scene_joystick_flat_terrain.xml"
 PHONEBOT_JOYSTICK_ROUGH_TERRAIN_XML = PHONEBOT_XML_ROOT / "scene_joystick_rough_terrain.xml"
+PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML = (
+    PHONEBOT_XML_ROOT / "scene_joystick_flat_terrain_alternative_imu.xml"
+)
+PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML = (
+    PHONEBOT_XML_ROOT / "scene_joystick_rough_terrain_alternative_imu.xml"
+)
 
 CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_XML = CHOPSTICKBOT_XML_ROOT / "scene_joystick_flat_terrain.xml"
 CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_XML = CHOPSTICKBOT_XML_ROOT / "scene_joystick_rough_terrain.xml"
+CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML = (
+    CHOPSTICKBOT_XML_ROOT / "scene_joystick_flat_terrain_alternative_imu.xml"
+)
+CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML = (
+    CHOPSTICKBOT_XML_ROOT / "scene_joystick_rough_terrain_alternative_imu.xml"
+)
 
 
 def task_to_xml(task_name: str) -> epath.Path:
@@ -37,8 +49,12 @@ def task_to_xml(task_name: str) -> epath.Path:
   mapping = {
       "phonebot_flat_terrain": PHONEBOT_JOYSTICK_FLAT_TERRAIN_XML,
       "phonebot_rough_terrain": PHONEBOT_JOYSTICK_ROUGH_TERRAIN_XML,
+      "phonebot_flat_terrain_alternative_imu": PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML,
+      "phonebot_rough_terrain_alternative_imu": PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML,
       "chopstickbot_flat_terrain": CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_XML,
       "chopstickbot_rough_terrain": CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_XML,
+      "chopstickbot_flat_terrain_alternative_imu": CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML,
+      "chopstickbot_rough_terrain_alternative_imu": CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML,
   }
   if task_name not in mapping:
     raise KeyError(f"Unknown Codesign task '{task_name}'. Available: {list(mapping.keys())}")
@@ -50,6 +66,10 @@ def phonebot_task_to_xml(task: str) -> epath.Path:
     return PHONEBOT_JOYSTICK_FLAT_TERRAIN_XML
   if task == "rough_terrain":
     return PHONEBOT_JOYSTICK_ROUGH_TERRAIN_XML
+  if task == "flat_terrain_alternative_imu":
+    return PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML
+  if task == "rough_terrain_alternative_imu":
+    return PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML
   raise KeyError(f"Unknown phonebot task '{task}'.")
 
 
@@ -58,6 +78,10 @@ def chopstickbot_task_to_xml(task: str) -> epath.Path:
     return CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_XML
   if task == "rough_terrain":
     return CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_XML
+  if task == "flat_terrain_alternative_imu":
+    return CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML
+  if task == "rough_terrain_alternative_imu":
+    return CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML
   raise KeyError(f"Unknown chopstickbot task '{task}'.")
 
 
