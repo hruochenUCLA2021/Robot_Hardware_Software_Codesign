@@ -15,7 +15,8 @@ output_dir: video_rollout_phonebot_alter
 
 # Global toggle: whether to visualize contact points/forces in rendered videos.
 # Can be overridden per rollout below.
-show_contact: false
+show_contact: true
+# show_contact: false
 
 # Optional: path to a YAML env_config (e.g. a saved `env_config.yaml` from a
 # training run). If null, the default joystick env config is used.
