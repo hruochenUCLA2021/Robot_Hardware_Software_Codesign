@@ -1,0 +1,27 @@
+# Configuration for data_plotter.py
+#
+# Each entry in `records` specifies a JSON file produced by the rollout scripts.
+# The plotter will create a subfolder next to each JSON file and save
+# qpos / qvel plots there.
+
+records:
+  # PhoneBot rollouts -------------------------------------------------------
+  # - path: video_rollout_phonebot/flat_forward_track_record.json
+  # - path: video_rollout_phonebot/flat_forward_fixed_record.json
+  # - path: video_rollout_phonebot/flat_side_track_record.json
+  # - path: video_rollout_phonebot/flat_side_fixed_record.json
+  # - path: video_rollout_phonebot/flat_turn_track_record.json
+  # - path: video_rollout_phonebot/flat_turn_fixed_record.json
+
+  # ChopstickBot rollouts ---------------------------------------------------
+  - path: video_rollout_chopstickbot_alter/flat_forward_track_record.json
+  # - path: video_rollout_chopstickbot/flat_forward_fixed_record.json
+  # - path: video_rollout_chopstickbot/flat_side_track_record.json
+  # - path: video_rollout_chopstickbot/flat_side_fixed_record.json
+  # - path: video_rollout_chopstickbot/flat_turn_track_record.json
+  # - path: video_rollout_chopstickbot/flat_turn_fixed_record.json
+
+# Plot settings
+plot:
+  figsize_per_subplot: [12, 2.5]
+  dpi: 150

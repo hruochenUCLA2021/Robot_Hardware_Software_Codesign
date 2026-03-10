@@ -12,6 +12,7 @@ import os
 import sys
 import functools
 from datetime import datetime
+import json
 import re
 
 # ---------------------------------------------------------------------------
@@ -206,6 +207,7 @@ def rollout_joystick(
     start_pose=(0.0, 0.0, 0.0),
     camera: str | None = "track",
     show_contact: bool = False,
+    record_json: str | None = None,
 ):
   """Generate rollout video with joystick commands."""
   policy_raw = make_inference_fn(params, deterministic=True)
@@ -283,6 +285,21 @@ def rollout_joystick(
   anim_positions: list[list[float]] = []
   anim_yaws: list[float] = []
 
+  # qpos / qvel recording ---------------------------------------------------
+  qpos_record: list[list[float]] = []
+  qvel_record: list[list[float]] = []
+  _mj = env.mj_model
+  qpos_labels: list[str] = ["base_x", "base_y", "base_z",
+                             "base_qw", "base_qx", "base_qy", "base_qz"]
+  qvel_labels: list[str] = ["base_vx", "base_vy", "base_vz",
+                             "base_wx", "base_wy", "base_wz"]
+  for _j in range(_mj.njnt):
+    if int(_mj.jnt_type[_j]) == 0:  # mjJNT_FREE
+      continue
+    _jname = mujoco.mj_id2name(_mj, mujoco.mjtObj.mjOBJ_JOINT, _j) or f"joint_{_j}"
+    qpos_labels.append(_jname)
+    qvel_labels.append(_jname)
+
   print(f"Starting rollout '{out}' for up to {max_steps} steps with command {command}")
   for step in range(max_steps):
     # Set joystick command each step (vx, vy, yaw).
@@ -292,6 +309,9 @@ def rollout_joystick(
     ctrl, _ = policy(state.obs, act_rng)
     state = jit_step(state, ctrl)
     traj.append(state)
+
+    qpos_record.append(np.array(state.data.qpos).tolist())
+    qvel_record.append(np.array(state.data.qvel).tolist())
 
     # Store pose for 2D animation every anim_skip steps.
     if (step % anim_skip) == 0:
@@ -312,6 +332,23 @@ def rollout_joystick(
     if bool(state.done):
       print(f"Episode terminated at step {step}")
       break
+
+  # Save qpos/qvel record to JSON ------------------------------------------
+  if record_json is not None:
+    record_data = {
+        "rollout_name": os.path.splitext(os.path.basename(record_json))[0],
+        "command": list(command),
+        "dt": float(env.dt),
+        "num_steps": len(qpos_record),
+        "qpos_labels": qpos_labels,
+        "qvel_labels": qvel_labels,
+        "qpos": qpos_record,
+        "qvel": qvel_record,
+    }
+    os.makedirs(os.path.dirname(record_json) or ".", exist_ok=True)
+    with open(record_json, "w", encoding="utf-8") as jf:
+      json.dump(record_data, jf)
+    print(f"[RECORD] Saved qpos/qvel ({len(qpos_record)} steps) -> {record_json}")
 
   # Render to video using Mujoco Playground's render API.
   traj_to_render = traj[::render_every]
@@ -508,6 +545,8 @@ def main():
     render_every = int(r.get("render_every", default_render_every))
     anim_skip = int(r.get("anim_skip", default_anim_skip))
 
+    record_path = os.path.join(output_dir, f"{name}_record.json")
+
     print(
         f"  - {name}: out={out_path}, command={command}, camera={camera}, "
         f"show_contact={show_contact}"
@@ -525,6 +564,7 @@ def main():
         render_every=render_every,
         anim_skip=anim_skip,
         show_contact=show_contact,
+        record_json=record_path,
     )
 
   print(f"\n✅ All videos saved to {output_dir}/")
