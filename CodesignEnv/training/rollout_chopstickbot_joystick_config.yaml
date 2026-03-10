@@ -1,6 +1,17 @@
-checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrain_flat/final
-env_name: ChopstickbotJoystickFlatTerrain
-output_dir: video_rollout_chopstickbot
+# alter means the imu frame is on the torso, not the base_motor_link
+
+
+
+checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrainAlter_flat/final
+env_name: ChopstickbotJoystickFlatTerrainAlter
+output_dir: video_rollout_chopstickbot_alter
+
+
+
+# checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrain_flat/final
+# env_name: ChopstickbotJoystickFlatTerrain
+# output_dir: video_rollout_chopstickbot
+
 
 # Global toggle: whether to visualize contact points/forces in rendered videos.
 # Can be overridden per rollout below.
