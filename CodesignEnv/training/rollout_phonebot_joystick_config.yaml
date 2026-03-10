@@ -21,6 +21,9 @@ show_contact: false
 # training run). If null, the default joystick env config is used.
 env_config_path: null
 
+# Automatically plot qpos/qvel curves from recorded JSON after rollout.
+auto_plot: true
+
 # Global defaults (can be overridden per rollout)
 max_steps: 1000
 render_every: 1

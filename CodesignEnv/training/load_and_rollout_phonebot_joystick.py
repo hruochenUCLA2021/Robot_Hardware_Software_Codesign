@@ -540,8 +540,11 @@ def main():
   default_anim_skip = int(cfg.get("anim_skip", 10))
   default_show_contact = bool(cfg.get("show_contact", False))
 
+  auto_plot = bool(cfg.get("auto_plot", False))
+
   print("\nGenerating rollout videos from config...")
   rollouts = cfg.get("rollouts", [])
+  recorded_jsons: list[str] = []
   for r in rollouts:
     name = r.get("name", "unnamed")
     out_name = r.get("out", f"{name}.mp4")
@@ -576,8 +579,18 @@ def main():
         show_contact=show_contact,
         record_json=record_path,
     )
+    recorded_jsons.append(record_path)
 
   print(f"\n✅ All videos saved to {output_dir}/")
+
+  if auto_plot and recorded_jsons:
+    print("\n[AUTO-PLOT] Generating qpos/qvel plots ...")
+    from data_plotter import process_record  # noqa: E402
+    plot_cfg = cfg.get("plot", {})
+    for jp in recorded_jsons:
+      if os.path.isfile(jp):
+        process_record(jp, plot_cfg)
+    print("[AUTO-PLOT] Done.")
 
 
 if __name__ == "__main__":
