@@ -62,7 +62,7 @@ def default_config() -> config_dict.ConfigDict:
               # dof_vel=0.0,
               # dof_vel=-0.00001,
               # dof_vel=-0.0001,
-              dof_vel=-0.001,
+              dof_vel=-0.01,
 
               feet_air_time=20.0,
               # Foot-related costs (tune later).

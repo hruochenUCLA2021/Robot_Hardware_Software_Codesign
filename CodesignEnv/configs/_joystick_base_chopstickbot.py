@@ -61,7 +61,8 @@ def default_config() -> config_dict.ConfigDict:
               # dof_vel=0.0,
 
               dof_acc=-0.000004,
-              dof_vel=-0.0001,
+              # dof_vel=-0.0001,
+              dof_vel=-0.01,
 
               
 
