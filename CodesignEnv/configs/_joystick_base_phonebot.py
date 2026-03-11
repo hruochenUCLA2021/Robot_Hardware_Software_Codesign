@@ -55,12 +55,15 @@ def default_config() -> config_dict.ConfigDict:
               torques=0.0,
               energy=0.0,
               action_rate=-0.01,
+
               # dof_acc=0.0,
               # dof_acc=-0.00000001,
               dof_acc=-0.000004,
               # dof_vel=0.0,
               # dof_vel=-0.00001,
-              dof_vel=-0.0001,
+              # dof_vel=-0.0001,
+              dof_vel=-0.001,
+
               feet_air_time=20.0,
               # Foot-related costs (tune later).
               feet_clearance=-0.05,

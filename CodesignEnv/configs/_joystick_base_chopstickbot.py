@@ -56,8 +56,15 @@ def default_config() -> config_dict.ConfigDict:
               torques=0.0,
               energy=0.0,
               action_rate=-0.01,
-              dof_acc=0.0,
-              dof_vel=0.0,
+
+              # dof_acc=0.0,
+              # dof_vel=0.0,
+
+              dof_acc=-0.000004,
+              dof_vel=-0.0001,
+
+              
+
               feet_air_time=25.0,
               # Collision penalties (small by default; tune later).
               foot_collision=-1.0,
