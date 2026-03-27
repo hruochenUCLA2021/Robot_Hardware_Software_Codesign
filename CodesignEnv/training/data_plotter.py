@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot qpos and qvel from rollout JSON records.
+"""Plot qpos, qvel, and qacc from rollout JSON records.
 
 Usage:
     python data_plotter.py                         # uses default config
@@ -59,7 +59,7 @@ def _plot_signals(
 
 
 def process_record(json_path: str, plot_cfg: dict):
-    """Load one JSON record and produce qpos + qvel plot images."""
+    """Load one JSON record and produce qpos + qvel + qacc plot images."""
     record = _load_record(json_path)
     rollout_name = record.get("rollout_name", "unknown")
     dt = float(record.get("dt", 0.002))
@@ -75,8 +75,15 @@ def process_record(json_path: str, plot_cfg: dict):
     figsize_per = tuple(plot_cfg.get("figsize_per_subplot", [12, 2.5]))
     dpi = int(plot_cfg.get("dpi", 150))
 
+    has_qacc = "qacc" in record and len(record["qacc"]) > 0
+    qacc_info = ""
+    if has_qacc:
+        qacc = np.array(record["qacc"], dtype=np.float64)
+        qacc_labels = record.get("qacc_labels", [f"qacc_{i}" for i in range(qacc.shape[1])])
+        qacc_info = f", qacc dim={qacc.shape[1]}"
+
     print(f"[{rollout_name}] {qpos.shape[0]} steps, "
-          f"qpos dim={qpos.shape[1]}, qvel dim={qvel.shape[1]}")
+          f"qpos dim={qpos.shape[1]}, qvel dim={qvel.shape[1]}{qacc_info}")
 
     _plot_signals(
         qpos, qpos_labels,
@@ -94,6 +101,15 @@ def process_record(json_path: str, plot_cfg: dict):
         figsize_per=figsize_per,
         dpi=dpi,
     )
+    if has_qacc:
+        _plot_signals(
+            qacc, qacc_labels,
+            title_prefix=f"{rollout_name} — qacc",
+            dt=dt,
+            out_path=os.path.join(plot_dir, "qacc.png"),
+            figsize_per=figsize_per,
+            dpi=dpi,
+        )
 
 
 def main():

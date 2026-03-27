@@ -285,9 +285,10 @@ def rollout_joystick(
   anim_positions: list[list[float]] = []
   anim_yaws: list[float] = []
 
-  # qpos / qvel recording ---------------------------------------------------
+  # qpos / qvel / qacc recording ---------------------------------------------
   qpos_record: list[list[float]] = []
   qvel_record: list[list[float]] = []
+  qacc_record: list[list[float]] = []
   _mj = env.mj_model
   qpos_labels: list[str] = ["base_x", "base_y", "base_z",
                              "base_qw", "base_qx", "base_qy", "base_qz"]
@@ -312,6 +313,7 @@ def rollout_joystick(
 
     qpos_record.append(np.array(state.data.qpos).tolist())
     qvel_record.append(np.array(state.data.qvel).tolist())
+    qacc_record.append(np.array(state.data.qacc).tolist())
 
     # Store pose for 2D animation every anim_skip steps.
     if (step % anim_skip) == 0:
@@ -335,6 +337,9 @@ def rollout_joystick(
 
   # Save qpos/qvel record to JSON ------------------------------------------
   if record_json is not None:
+    qacc_labels = [lb.replace("_v", "_a").replace("_w", "_alpha")
+                   if lb.startswith("base_") else f"{lb}_acc"
+                   for lb in qvel_labels]
     record_data = {
         "rollout_name": os.path.splitext(os.path.basename(record_json))[0],
         "command": list(command),
@@ -342,13 +347,15 @@ def rollout_joystick(
         "num_steps": len(qpos_record),
         "qpos_labels": qpos_labels,
         "qvel_labels": qvel_labels,
+        "qacc_labels": qacc_labels,
         "qpos": qpos_record,
         "qvel": qvel_record,
+        "qacc": qacc_record,
     }
     os.makedirs(os.path.dirname(record_json) or ".", exist_ok=True)
     with open(record_json, "w", encoding="utf-8") as jf:
       json.dump(record_data, jf)
-    print(f"[RECORD] Saved qpos/qvel ({len(qpos_record)} steps) -> {record_json}")
+    print(f"[RECORD] Saved qpos/qvel/qacc ({len(qpos_record)} steps) -> {record_json}")
 
   # Render to video using Mujoco Playground's render API.
   traj_to_render = traj[::render_every]

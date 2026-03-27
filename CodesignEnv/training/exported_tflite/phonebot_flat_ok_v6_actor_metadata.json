@@ -1,0 +1,24 @@
+{
+  "env_name": "PhonebotJoystickFlatTerrain",
+  "checkpoint_dir": "/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/checkpoints/PhonebotJoystickFlatTerrain_flat_ok_v6/final",
+  "policy_obs_key": "state",
+  "value_obs_key": "privileged_state",
+  "state_dim": 52,
+  "action_dim": 13,
+  "default_pose": [
+    -0.4399999976158142,
+    0.0,
+    0.0,
+    0.7850000262260437,
+    -0.37700000405311584,
+    0.0,
+    0.4399999976158142,
+    0.0,
+    0.0,
+    -0.7850000262260437,
+    0.37700000405311584,
+    0.0,
+    0.0
+  ],
+  "note": "Action is normalized; map to joint targets as default_pose + action * action_scale."
+}
