@@ -66,12 +66,19 @@ def main():
   env_section = cfg.get("environment", {}) or {}
   env_cfg_path = env_section.get("env_config_path")
   use_alt_imu = bool(env_section.get("use_alternative_imu", False))
+  use_alt_imu_fv2 = bool(env_section.get("use_alternative_imu_fv2", False))
   env_name_flat = env_section.get("env_name_flat")
   env_name_rough = env_section.get("env_name_rough")
   if not env_name_flat:
-    env_name_flat = "PhonebotJoystickFlatTerrainAlter" if use_alt_imu else "PhonebotJoystickFlatTerrain"
+    if use_alt_imu_fv2:
+      env_name_flat = "PhonebotJoystickFlatTerrainAlterFV2"
+    else:
+      env_name_flat = "PhonebotJoystickFlatTerrainAlter" if use_alt_imu else "PhonebotJoystickFlatTerrain"
   if not env_name_rough:
-    env_name_rough = "PhonebotJoystickRoughTerrainAlter" if use_alt_imu else "PhonebotJoystickRoughTerrain"
+    if use_alt_imu_fv2:
+      env_name_rough = "PhonebotJoystickRoughTerrainAlterFV2"
+    else:
+      env_name_rough = "PhonebotJoystickRoughTerrainAlter" if use_alt_imu else "PhonebotJoystickRoughTerrain"
 
   # Set W&B API key if provided.
   wandb_cfg = cfg.get("wandb", {}) or {}

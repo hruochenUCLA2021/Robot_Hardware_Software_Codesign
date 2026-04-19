@@ -18,6 +18,8 @@ ENVIRONMENTS = [
     "ChopstickbotJoystickRoughTerrainAlter",
     "PhonebotJoystickFlatTerrainAlter",
     "PhonebotJoystickRoughTerrainAlter",
+    "PhonebotJoystickFlatTerrainAlterFV2",
+    "PhonebotJoystickRoughTerrainAlterFV2",
 ]
 
 
@@ -38,6 +40,10 @@ def get_environment(name: str):
     if name == "PhonebotJoystickFlatTerrainAlter":
         return phonebot_joystick.Joystick, phonebot_joystick.default_config
     if name == "PhonebotJoystickRoughTerrainAlter":
+        return phonebot_joystick.Joystick, phonebot_joystick.default_config
+    if name == "PhonebotJoystickFlatTerrainAlterFV2":
+        return phonebot_joystick.Joystick, phonebot_joystick.default_config
+    if name == "PhonebotJoystickRoughTerrainAlterFV2":
         return phonebot_joystick.Joystick, phonebot_joystick.default_config
 
     raise ValueError(f"Unknown environment: {name}. Available: {ENVIRONMENTS}")

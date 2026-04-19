@@ -189,6 +189,11 @@ model_modification/mjcf/robot_realtime_state_saved_in_simulate/*
 
 **/*.png
 
+# Required MuJoCo MJCF assets (track these PNGs)
+!models/assets/**/*.png
+!models/model_phonebot/assets/**/*.png
+!models/model_phonebot_fred_v2/assets/**/*.png
+
 *.gif
 
 MUJOCO_LOG.*

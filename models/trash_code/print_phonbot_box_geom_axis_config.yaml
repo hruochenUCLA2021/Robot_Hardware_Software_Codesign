@@ -1,0 +1,33 @@
+mjcf: model_phonebot_fred_v2/phonebot_v2_auto_boxes.xml
+# mjcf: model_phonebot_fred_v2/phonebot_v2.xml
+# mjcf: model_phonebot/phonebot_general.xml
+base_body_name: base_motor_link
+float_fmt: "{:.6f}"
+
+# Bodies you want to print (order matters)
+bodies:
+  - base_motor_link
+  - l_hip_pitch
+  - l_hip_roll
+  - l_hip_thigh
+  - l_hip_calf
+  - l_ankle_pitch
+  - l_ankle_roll
+  - r_hip_pitch
+  - r_hip_roll
+  - r_hip_thigh
+  - r_hip_calf
+  - r_ankle_pitch
+  - r_ankle_roll
+
+# How to select which "box geoms" to print from each body:
+geom_selection:
+  # For `phonebot_general.xml`, the motor boxes are unnamed but are `type="box"` and `group="1"`.
+  group_filter: "1"
+  prefer_named: true
+  # If you set name_contains, and there are named boxes, it will filter them:
+  # name_contains: ["collision_box"]
+  #
+  # You can also explicitly list names:
+  # geom_names: ["l_hip_pitch_collision_box", "l_hip_pitch_collision_box_2"]
+

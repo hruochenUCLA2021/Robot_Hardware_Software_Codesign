@@ -15,6 +15,11 @@ environment:
   ##   - PhonebotJoystickFlatTerrainAlter
   ##   - PhonebotJoystickRoughTerrainAlter
   use_alternative_imu: false
+  ## If true, use the registry envs that load the model_phonebot_fred_v2 alter_v2 scenes:
+  ##   - PhonebotJoystickFlatTerrainAlterFV2
+  ##   - PhonebotJoystickRoughTerrainAlterFV2
+  ## This takes precedence over use_alternative_imu (unless env_name_* are explicitly set).
+  use_alternative_imu_fv2: false
   ## Optional explicit overrides (if provided, take precedence over use_alternative_imu):
   ## env_name_flat: PhonebotJoystickFlatTerrain
   ## env_name_rough: PhonebotJoystickRoughTerrain

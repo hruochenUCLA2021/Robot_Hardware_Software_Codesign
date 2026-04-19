@@ -6,6 +6,10 @@ checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat/final
 env_name: PhonebotJoystickFlatTerrainAlter
 output_dir: video_rollout_phonebot_alter
 
+## If true, map PhonebotJoystick*Alter -> PhonebotJoystick*AlterFV2 automatically
+## (so you can keep older configs and just flip this flag).
+use_alternative_imu_fv2: false
+
 
 # checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat/final
 # env_name: PhonebotJoystickFlatTerrain

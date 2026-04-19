@@ -1,0 +1,88 @@
+reference_mjcf: model_phonebot/phonebot_general.xml
+
+# 13 motors = base motor + 12 leg motors
+motor_bodies:
+  - base_motor_link
+  - l_hip_pitch
+  - l_hip_roll
+  - l_hip_thigh
+  - l_hip_calf
+  - l_ankle_pitch
+  - l_ankle_roll
+  - r_hip_pitch
+  - r_hip_roll
+  - r_hip_thigh
+  - r_hip_calf
+  - r_ankle_pitch
+  - r_ankle_roll
+
+motor_box:
+  # In `phonebot_v2.xml` the green box geoms are named like:
+  #   base_motor_link_collision_box
+  #   l_hip_pitch_collision_box
+  geom_name_template: "{body}_collision_box"
+
+  # Explicit mapping for cases where target has multiple box geoms per body (e.g. ankle_pitch has _box and _box_2)
+  # or where the reference "box orientation" we want comes from a different reference body.
+  #
+  # Each entry:
+  # - target_body: body in target MJCF
+  # - target_geom: geom name in that target body
+  # - reference_body: body in reference MJCF whose *box axes* you want to match (defaults to same as target_body)
+  geom_mappings:
+    - { target_body: base_motor_link, target_geom: base_motor_link_collision_box, reference_body: base_motor_link }
+    - { target_body: l_hip_pitch,    target_geom: l_hip_pitch_collision_box,    reference_body: l_hip_pitch }
+    - { target_body: l_hip_roll,     target_geom: l_hip_roll_collision_box,     reference_body: l_hip_roll }
+    - { target_body: l_hip_thigh,    target_geom: l_hip_thigh_collision_box,    reference_body: l_hip_thigh }
+    - { target_body: l_hip_calf,     target_geom: l_hip_calf_collision_box,     reference_body: l_hip_calf }
+    - { target_body: l_ankle_pitch,  target_geom: l_ankle_pitch_collision_box,  reference_body: l_ankle_pitch }
+    # 2nd ankle_pitch box should match the old ankle_roll motor box orientation.
+    - { target_body: l_ankle_pitch,  target_geom: l_ankle_pitch_collision_box_2, reference_body: l_ankle_roll }
+
+    - { target_body: r_hip_pitch,    target_geom: r_hip_pitch_collision_box,    reference_body: r_hip_pitch }
+    - { target_body: r_hip_roll,     target_geom: r_hip_roll_collision_box,     reference_body: r_hip_roll }
+    - { target_body: r_hip_thigh,    target_geom: r_hip_thigh_collision_box,    reference_body: r_hip_thigh }
+    - { target_body: r_hip_calf,     target_geom: r_hip_calf_collision_box,     reference_body: r_hip_calf }
+    - { target_body: r_ankle_pitch,  target_geom: r_ankle_pitch_collision_box,  reference_body: r_ankle_pitch }
+    - { target_body: r_ankle_pitch,  target_geom: r_ankle_pitch_collision_box_2, reference_body: r_ankle_roll }
+
+  # Reference box position expressed in the reference motor frame (i.e. body frame in phonebot_general).
+  reference_pos: [0.0, -0.012, 0.0]
+
+  # Compare orientations in this base body frame (to ignore global/model rotation differences).
+  base_body_name: base_motor_link
+
+  # If the reference model uses a different base-frame axis convention, set a constant quaternion
+  # (wxyz) that maps reference-base vectors into target-base vectors.
+  #
+  # Old phonebot_general.xml comment: (z up, y forward, x sideways)
+  # New v2 convention (your note):     (z up, x forward, y sideways)
+  #
+  # That mapping is a -90deg rotation about +Z: Rz(-90deg).
+  reference_rel_quat_premul: [0.70710678, 0.0, 0.0, -0.70710678]
+
+  # Alignment mode:
+  # - twist_z: only rotate around motor/body local Z (keeps output-shaft axis fixed)
+  # - twist_base_z: only yaw around BASE +Z (prevents world "tilt" when body-Z is not vertical)
+  # - full: match full 3D orientation (can rotate Z too)
+  align_mode: twist_base_z
+
+  # Only write orientation (your request).
+  write_pos: false
+  write_quat: true
+
+  # Output formatting (MuJoCo expects `w x y z` for quats).
+  float_fmt: "{:.6f}"
+
+run:
+  # Safer default: write to output files.
+  # If you set `in_place: true`, the script will overwrite each `target_mjcf`.
+  in_place: false
+  backup_if_in_place: true
+
+targets:
+  - target_mjcf: model_phonebot_fred_v2/phonebot_v2.xml
+    output_mjcf: model_phonebot_fred_v2/phonebot_v2_auto_boxes.xml
+  - target_mjcf: model_phonebot_fred_v2/phonebot_v2_alternative_imu.xml
+    output_mjcf: model_phonebot_fred_v2/phonebot_v2_alternative_imu_auto_boxes.xml
+

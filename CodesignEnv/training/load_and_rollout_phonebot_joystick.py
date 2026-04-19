@@ -148,14 +148,17 @@ def load_policy_from_checkpoint(
 
   # For joystick environments, explicitly choose the task so that we load the
   # correct scene XML (flat vs rough). Other envs keep their own defaults.
-  is_alt = "Alter" in env_name
+  is_alt_fv2 = "AlterFV2" in env_name
+  is_alt = ("Alter" in env_name) and (not is_alt_fv2)
   if "FlatTerrain" in env_name:
     task = "flat_terrain"
   elif "RoughTerrain" in env_name:
     task = "rough_terrain"
   else:
     raise ValueError(f"Unexpected env_name for joystick rollout: {env_name}")
-  if is_alt:
+  if is_alt_fv2:
+    task = f"{task}_alternative_imu_fv2"
+  elif is_alt:
     task = f"{task}_alternative_imu"
 
   env = EnvClass(task=task, config=env_cfg)
@@ -528,6 +531,10 @@ def main():
     raise FileNotFoundError(f"Checkpoint directory not found: {ckpt_dir}")
 
   env_name = cfg.get("env_name", "PhonebotJoystickFlatTerrain")
+  use_alt_imu_fv2 = bool(cfg.get("use_alternative_imu_fv2", False))
+  if use_alt_imu_fv2 and ("Alter" in env_name) and ("AlterFV2" not in env_name):
+    env_name = env_name.replace("Alter", "AlterFV2")
+    print(f"[CONFIG] use_alternative_imu_fv2=true -> env_name remapped to: {env_name}")
   env_cfg_path = cfg.get("env_config_path", None)
   if env_cfg_path is not None:
     print(f"Using env_config_path from config: '{env_cfg_path}'")
