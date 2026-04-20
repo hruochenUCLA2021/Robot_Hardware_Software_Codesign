@@ -289,6 +289,7 @@ def rollout_joystick(
   qpos_record: list[list[float]] = []
   qvel_record: list[list[float]] = []
   qacc_record: list[list[float]] = []
+  actuator_force_record: list[list[float]] = []
   _mj = env.mj_model
   qpos_labels: list[str] = ["base_x", "base_y", "base_z",
                              "base_qw", "base_qx", "base_qy", "base_qz"]
@@ -300,6 +301,17 @@ def rollout_joystick(
     _jname = mujoco.mj_id2name(_mj, mujoco.mjtObj.mjOBJ_JOINT, _j) or f"joint_{_j}"
     qpos_labels.append(_jname)
     qvel_labels.append(_jname)
+
+  # Actuator-force labels (proxy for joint torque for hinge joints).
+  actuator_force_labels: list[str] = []
+  for _a in range(_mj.nu):
+    _aname = mujoco.mj_id2name(_mj, mujoco.mjtObj.mjOBJ_ACTUATOR, _a) or f"act_{_a}"
+    try:
+      _jid = int(_mj.actuator_trnid[_a, 0])
+      _jname = mujoco.mj_id2name(_mj, mujoco.mjtObj.mjOBJ_JOINT, _jid) or f"joint_{_jid}"
+      actuator_force_labels.append(f"{_aname}({_jname})")
+    except Exception:  # pylint: disable=broad-except
+      actuator_force_labels.append(_aname)
 
   print(f"Starting rollout '{out}' for up to {max_steps} steps with command {command}")
   for step in range(max_steps):
@@ -314,6 +326,10 @@ def rollout_joystick(
     qpos_record.append(np.array(state.data.qpos).tolist())
     qvel_record.append(np.array(state.data.qvel).tolist())
     qacc_record.append(np.array(state.data.qacc).tolist())
+    try:
+      actuator_force_record.append(np.array(state.data.actuator_force).tolist())
+    except Exception:  # pylint: disable=broad-except
+      actuator_force_record.append([0.0] * int(_mj.nu))
 
     # Store pose for 2D animation every anim_skip steps.
     if (step % anim_skip) == 0:
@@ -348,14 +364,18 @@ def rollout_joystick(
         "qpos_labels": qpos_labels,
         "qvel_labels": qvel_labels,
         "qacc_labels": qacc_labels,
+        "actuator_force_labels": actuator_force_labels,
         "qpos": qpos_record,
         "qvel": qvel_record,
         "qacc": qacc_record,
+        "actuator_force": actuator_force_record,
     }
     os.makedirs(os.path.dirname(record_json) or ".", exist_ok=True)
     with open(record_json, "w", encoding="utf-8") as jf:
       json.dump(record_data, jf)
-    print(f"[RECORD] Saved qpos/qvel/qacc ({len(qpos_record)} steps) -> {record_json}")
+    print(
+        f"[RECORD] Saved qpos/qvel/qacc/actuator_force ({len(qpos_record)} steps) -> {record_json}"
+    )
 
   # Render to video using Mujoco Playground's render API.
   traj_to_render = traj[::render_every]

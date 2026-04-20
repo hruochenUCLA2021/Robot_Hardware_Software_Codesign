@@ -59,7 +59,7 @@ def _plot_signals(
 
 
 def process_record(json_path: str, plot_cfg: dict):
-    """Load one JSON record and produce qpos + qvel + qacc plot images."""
+    """Load one JSON record and produce qpos + qvel + qacc (+ torque) plot images."""
     record = _load_record(json_path)
     rollout_name = record.get("rollout_name", "unknown")
     dt = float(record.get("dt", 0.002))
@@ -82,8 +82,18 @@ def process_record(json_path: str, plot_cfg: dict):
         qacc_labels = record.get("qacc_labels", [f"qacc_{i}" for i in range(qacc.shape[1])])
         qacc_info = f", qacc dim={qacc.shape[1]}"
 
+    has_tau = "actuator_force" in record and len(record["actuator_force"]) > 0
+    tau_info = ""
+    if has_tau:
+        tau = np.array(record["actuator_force"], dtype=np.float64)
+        tau_labels = record.get(
+            "actuator_force_labels",
+            record.get("tau_labels", [f"tau_{i}" for i in range(tau.shape[1])]),
+        )
+        tau_info = f", torque dim={tau.shape[1]}"
+
     print(f"[{rollout_name}] {qpos.shape[0]} steps, "
-          f"qpos dim={qpos.shape[1]}, qvel dim={qvel.shape[1]}{qacc_info}")
+          f"qpos dim={qpos.shape[1]}, qvel dim={qvel.shape[1]}{qacc_info}{tau_info}")
 
     _plot_signals(
         qpos, qpos_labels,
@@ -107,6 +117,16 @@ def process_record(json_path: str, plot_cfg: dict):
             title_prefix=f"{rollout_name} — qacc",
             dt=dt,
             out_path=os.path.join(plot_dir, "qacc.png"),
+            figsize_per=figsize_per,
+            dpi=dpi,
+        )
+
+    if has_tau:
+        _plot_signals(
+            tau, tau_labels,
+            title_prefix=f"{rollout_name} — actuator_force (joint torque proxy)",
+            dt=dt,
+            out_path=os.path.join(plot_dir, "torque.png"),
             figsize_per=figsize_per,
             dpi=dpi,
         )
