@@ -28,7 +28,8 @@ def default_config() -> config_dict.ConfigDict:
       episode_length=1000,
       action_repeat=1,
       action_scale=1.0,
-      tracking_sigma=0.25,
+      tracking_sigma=1.0,   # if tracking is poor and the error distribution is big, slightly increasing the sigma can help ! 
+      # tracking_sigma=0.25,
       noise_config=config_dict.create(
           level=0.4,
           scales=config_dict.create(
@@ -46,13 +47,20 @@ def default_config() -> config_dict.ConfigDict:
       ),
       reward_config=config_dict.create(
           scales=config_dict.create(
+              # tracking_lin_vel=10.0,
+              # tracking_lin_vel=2.0,
               tracking_lin_vel=1.0,
+              # tracking_ang_vel=5.0,
+              # tracking_ang_vel=1.0,
               tracking_ang_vel=0.5,
               lin_vel_z=-0.2,
               ang_vel_xy=-0.1,
               orientation=-1.0,
               # Energy-related penalties (HERMES style). Keep 0 by default; tune later.
-              torques=0.0,
+              # torques=0.0,
+              # torques=-0.0001,
+              torques=-0.1,
+
               energy=0.0,
               action_rate=-0.01,
 
@@ -61,17 +69,22 @@ def default_config() -> config_dict.ConfigDict:
               dof_acc=-0.000004,
               # dof_vel=0.0,
               # dof_vel=-0.00001,
-              # dof_vel=-0.0001,
-              dof_vel=-0.01,
+              dof_vel=-0.0001,
+              # dof_vel=-0.01,
 
+              # feet_air_time=50.0,
               feet_air_time=20.0,
+              # feet_air_time=2.0,
               # Foot-related costs (tune later).
               feet_clearance=-0.05,
               foot_collision=-1.0,
               # Pose related rewards (HERMES NoLinearVel style).
+              # joint_deviation_knee=-0.02,
               joint_deviation_knee=-0.1,
+              # joint_deviation_hip=-0.02,
               joint_deviation_hip=-0.1,
               dof_pos_limits=-1.0,
+              # pose=-0.05,
               pose=-0.25,
               # pose=-1.0,
               feet_distance=-1.0,
