@@ -23,7 +23,40 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane" friction="1.0"/>
   </worldbody>
 
+  <!-- this is what the old one was  -->
   <keyframe>
+    <key name="home"
+      qpos="
+    0 0 0.30
+    1 0 0 0
+    -0.44 0 0 0.785 0.377 0
+    0.44 0 0 -0.785 -0.377 0
+    0
+    "
+      ctrl="
+    -0.44 0 0 0.785 0.377 0
+    0.44 0 0 -0.785 -0.377 0
+    0
+    "/>
+  </keyframe>
+
+  <!-- <keyframe>
+    <key name="home"
+      qpos="
+    0 0 0.30
+    1 0 0 0
+    -0.251 0 0 0.503 0.251 0
+    0.251 0 0 -0.503 -0.251 0
+    0
+    "
+      ctrl="
+    -0.251 0 0 0.503 0.251 0
+    0.251 0 0 -0.503 -0.251 0
+    0
+    "/>
+  </keyframe> -->
+
+  <!-- <keyframe>
     <key name="home"
       qpos="
     0 0 0.30
@@ -37,7 +70,7 @@
     0.126 0 0 -0.251 -0.126 0
     0
     "/>
-  </keyframe>
+  </keyframe> -->
 
   <!-- this is the old one 
   <keyframe>
