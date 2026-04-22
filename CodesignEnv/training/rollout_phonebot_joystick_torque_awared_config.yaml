@@ -1,0 +1,80 @@
+# alter means the imu frame is on the torso, not the base_motor_link
+
+
+
+checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat/final
+env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+output_dir: video_rollout_phonebot_alter
+
+## If true, map PhonebotJoystick*Alter -> PhonebotJoystick*AlterFV2 automatically
+## (so you can keep older configs and just flip this flag).
+use_alternative_imu_fv2: false
+
+## Which keyframe to use for initialization (scene keyframes).
+home_keyframe_name: home
+
+
+# checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat/final
+# env_name: PhonebotJoystickFlatTerrain
+# output_dir: video_rollout_phonebot
+
+
+
+# Global toggle: whether to visualize contact points/forces in rendered videos.
+# Can be overridden per rollout below.
+show_contact: true
+# show_contact: false
+
+# Optional: path to a YAML env_config (e.g. a saved `env_config.yaml` from a
+# training run). If null, the default joystick env config is used.
+env_config_path: null
+
+# Automatically plot qpos/qvel curves from recorded JSON after rollout.
+auto_plot: true
+
+# Global defaults (can be overridden per rollout)
+max_steps: 1000
+render_every: 1
+anim_skip: 10
+
+rollouts:
+  # Forward walking
+  - name: flat_forward_track
+    out: phonebot_flat_forward_track.mp4
+    command: [0.25, 0.0, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: track
+
+  - name: flat_forward_fixed
+    out: phonebot_flat_forward_fixed.mp4
+    command: [0.25, 0.0, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: null
+
+  # Sideways walking
+  - name: flat_side_track
+    out: phonebot_flat_side_track.mp4
+    command: [0.0, 0.125, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: track
+
+  - name: flat_side_fixed
+    out: phonebot_flat_side_fixed.mp4
+    command: [0.0, 0.125, 0.0]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: null
+
+  # Turn in place
+  - name: flat_turn_track
+    out: phonebot_flat_turn_track.mp4
+    command: [0.0, 0.0, 0.75]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: track
+
+  - name: flat_turn_fixed
+    out: phonebot_flat_turn_fixed.mp4
+    command: [0.0, 0.0, 0.75]
+    start_pose: [0.0, 0.0, 0.0]
+    camera: null
+
+

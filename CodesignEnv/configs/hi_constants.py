@@ -25,6 +25,7 @@ MODELS_ROOT = PROJECT_ROOT / "models"
 PHONEBOT_XML_ROOT = MODELS_ROOT / "model_phonebot"
 CHOPSTICKBOT_XML_ROOT = MODELS_ROOT / "model_chopstickbot"
 PHONEBOT_FV2_XML_ROOT = MODELS_ROOT / "model_phonebot_fred_v2"
+PHONEBOT_FV2_TORQUE_XML_ROOT = MODELS_ROOT / "model_phonebot_fred_v2_torque_version"
 
 PHONEBOT_JOYSTICK_FLAT_TERRAIN_XML = PHONEBOT_XML_ROOT / "scene_joystick_flat_terrain.xml"
 PHONEBOT_JOYSTICK_ROUGH_TERRAIN_XML = PHONEBOT_XML_ROOT / "scene_joystick_rough_terrain.xml"
@@ -39,6 +40,13 @@ PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_FV2_XML = (
 )
 PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_FV2_XML = (
     PHONEBOT_FV2_XML_ROOT / "scene_joystick_rough_terrain_alter_v2.xml"
+)
+
+PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_FV2_TORQUE_XML = (
+    PHONEBOT_FV2_TORQUE_XML_ROOT / "scene_joystick_flat_terrain_alter_v2.xml"
+)
+PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_FV2_TORQUE_XML = (
+    PHONEBOT_FV2_TORQUE_XML_ROOT / "scene_joystick_rough_terrain_alter_v2.xml"
 )
 
 CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_XML = CHOPSTICKBOT_XML_ROOT / "scene_joystick_flat_terrain.xml"
@@ -60,6 +68,8 @@ def task_to_xml(task_name: str) -> epath.Path:
       "phonebot_rough_terrain_alternative_imu": PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML,
       "phonebot_flat_terrain_alternative_imu_fv2": PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_FV2_XML,
       "phonebot_rough_terrain_alternative_imu_fv2": PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_FV2_XML,
+      "phonebot_flat_terrain_alternative_imu_fv2_torque": PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_FV2_TORQUE_XML,
+      "phonebot_rough_terrain_alternative_imu_fv2_torque": PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_FV2_TORQUE_XML,
       "chopstickbot_flat_terrain": CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_XML,
       "chopstickbot_rough_terrain": CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_XML,
       "chopstickbot_flat_terrain_alternative_imu": CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML,
@@ -83,6 +93,10 @@ def phonebot_task_to_xml(task: str) -> epath.Path:
     return PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_FV2_XML
   if task == "rough_terrain_alternative_imu_fv2":
     return PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_FV2_XML
+  if task == "flat_terrain_alternative_imu_fv2_torque":
+    return PHONEBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_FV2_TORQUE_XML
+  if task == "rough_terrain_alternative_imu_fv2_torque":
+    return PHONEBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_FV2_TORQUE_XML
   raise KeyError(f"Unknown phonebot task '{task}'.")
 
 
