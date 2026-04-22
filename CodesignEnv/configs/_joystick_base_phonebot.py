@@ -28,8 +28,8 @@ def default_config() -> config_dict.ConfigDict:
       episode_length=1000,
       action_repeat=1,
       action_scale=1.0,
-      tracking_sigma=1.0,   # if tracking is poor and the error distribution is big, slightly increasing the sigma can help ! 
-      # tracking_sigma=0.25,
+      # tracking_sigma=1.0,   # if tracking is poor and the error distribution is big, slightly increasing the sigma can help ! 
+      tracking_sigma=0.25,
       noise_config=config_dict.create(
           level=0.4,
           scales=config_dict.create(
