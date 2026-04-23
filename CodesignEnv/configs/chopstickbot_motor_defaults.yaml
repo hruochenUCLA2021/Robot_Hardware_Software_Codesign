@@ -1,0 +1,33 @@
+## Default motor model parameters for ChopstickBot torque-aware MJX env.
+##
+## Units:
+## - angles: rad
+## - velocities: rad/s
+## - torques: Nm
+##
+## These values are initialized from the ToddlerBot paper (Appendix 8.10 / Table 3)
+## for Dynamixel 2XL430 and used here as an XL430-family proxy.
+##
+kp_ratio: 150.0
+kd_ratio: 16.0
+passive_active_ratio: 3.0
+
+motor:
+  ## "Real" PD gains as used on Dynamixel-style controllers (unitless in firmware).
+  ## We convert to simulator gains by dividing by kp_ratio/kd_ratio.
+  # ToddlerBot 2XL430 uses kp=600.0 (see toddlerbot default.yml motor table).
+  kp_real: 600.0
+  kd_real: 0.0
+
+  ## Additional damping when powered on (Nms/rad), ToddlerBot's kd_min.
+  kd_min: 0.162
+
+  ## Acceleration-side torque-speed envelope (piecewise linear).
+  tau_max: 0.93
+  q_dot_tau_max: 2.0
+  q_dot_max: 5.97
+  tau_q_dot_max: 0.08
+
+  ## Braking-side torque limit (constant).
+  tau_brake_max: 1.4
+

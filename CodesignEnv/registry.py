@@ -6,6 +6,7 @@ tasks for PhoneBot and ChopstickBot joystick training.
 """
 
 from .configs import chopstick_joystick
+from .configs import chopstick_joystick_torque_awared
 from .configs import phonebot_joystick
 from .configs import phonebot_joystick_torque_awared
 
@@ -17,6 +18,8 @@ ENVIRONMENTS = [
     "PhonebotJoystickRoughTerrain",
     "ChopstickbotJoystickFlatTerrainAlter",
     "ChopstickbotJoystickRoughTerrainAlter",
+    "ChopstickbotJoystickFlatTerrainAlterTorqueAwared",
+    "ChopstickbotJoystickRoughTerrainAlterTorqueAwared",
     "PhonebotJoystickFlatTerrainAlter",
     "PhonebotJoystickRoughTerrainAlter",
     "PhonebotJoystickFlatTerrainAlterFV2",
@@ -40,6 +43,10 @@ def get_environment(name: str):
         return chopstick_joystick.Joystick, chopstick_joystick.default_config
     if name == "ChopstickbotJoystickRoughTerrainAlter":
         return chopstick_joystick.Joystick, chopstick_joystick.default_config
+    if name == "ChopstickbotJoystickFlatTerrainAlterTorqueAwared":
+        return chopstick_joystick_torque_awared.Joystick, chopstick_joystick_torque_awared.default_config
+    if name == "ChopstickbotJoystickRoughTerrainAlterTorqueAwared":
+        return chopstick_joystick_torque_awared.Joystick, chopstick_joystick_torque_awared.default_config
     if name == "PhonebotJoystickFlatTerrainAlter":
         return phonebot_joystick.Joystick, phonebot_joystick.default_config
     if name == "PhonebotJoystickRoughTerrainAlter":
