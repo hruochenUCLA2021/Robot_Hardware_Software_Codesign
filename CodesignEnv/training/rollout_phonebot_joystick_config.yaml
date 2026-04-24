@@ -1,10 +1,21 @@
 # alter means the imu frame is on the torso, not the base_motor_link
 
 
+checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2_flat/final
+env_name: PhonebotJoystickFlatTerrainAlterFV2
+output_dir: video_rollout_phonebot_alter_fv2_flat
 
-checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat/final
-env_name: PhonebotJoystickFlatTerrainAlter
-output_dir: video_rollout_phonebot_alter
+# checkpoint_dir: checkpoints/PhonebotJoystickRoughTerrainAlterFV2_rough/final
+# env_name: PhonebotJoystickRoughTerrainAlterFV2
+# output_dir: video_rollout_phonebot_alter_fv2_rough
+
+
+
+
+
+# checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat/final
+# env_name: PhonebotJoystickFlatTerrainAlter
+# output_dir: video_rollout_phonebot_alter
 
 ## If true, map PhonebotJoystick*Alter -> PhonebotJoystick*AlterFV2 automatically
 ## (so you can keep older configs and just flip this flag).
@@ -38,26 +49,26 @@ rollouts:
   # Forward walking
   - name: flat_forward_track
     out: phonebot_flat_forward_track.mp4
-    command: [0.25, 0.0, 0.0]
+    command: [0.5, 0.0, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_forward_fixed
     out: phonebot_flat_forward_fixed.mp4
-    command: [0.25, 0.0, 0.0]
+    command: [0.5, 0.0, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 
   # Sideways walking
   - name: flat_side_track
     out: phonebot_flat_side_track.mp4
-    command: [0.0, 0.125, 0.0]
+    command: [0.0, 0.25, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_side_fixed
     out: phonebot_flat_side_fixed.mp4
-    command: [0.0, 0.125, 0.0]
+    command: [0.0, 0.25, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 

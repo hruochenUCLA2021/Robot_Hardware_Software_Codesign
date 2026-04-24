@@ -4,13 +4,19 @@
 
 checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat/final
 env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
-output_dir: video_rollout_phonebot_alter
+output_dir: video_rollout_phonebot_alter_fv2_torque_awared_flat
+
+# checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_rough/final
+# env_name: PhonebotJoystickRoughTerrainAlterFV2TorqueAwared
+# output_dir: video_rollout_phonebot_alter_fv2_torque_awared_rough
+
 
 ## If true, map PhonebotJoystick*Alter -> PhonebotJoystick*AlterFV2 automatically
 ## (so you can keep older configs and just flip this flag).
 use_alternative_imu_fv2: false
 
 ## Which keyframe to use for initialization (scene keyframes).
+# home_keyframe_name: home_straight
 home_keyframe_name: home
 
 
@@ -41,39 +47,39 @@ rollouts:
   # Forward walking
   - name: flat_forward_track
     out: phonebot_flat_forward_track.mp4
-    command: [0.25, 0.0, 0.0]
+    command: [1.0, 0.0, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_forward_fixed
     out: phonebot_flat_forward_fixed.mp4
-    command: [0.25, 0.0, 0.0]
+    command: [1.0, 0.0, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 
   # Sideways walking
   - name: flat_side_track
     out: phonebot_flat_side_track.mp4
-    command: [0.0, 0.125, 0.0]
+    command: [0.0, 0.5, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_side_fixed
     out: phonebot_flat_side_fixed.mp4
-    command: [0.0, 0.125, 0.0]
+    command: [0.0, 0.5, 0.0]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 
   # Turn in place
   - name: flat_turn_track
     out: phonebot_flat_turn_track.mp4
-    command: [0.0, 0.0, 0.75]
+    command: [0.0, 0.0, 1.5]
     start_pose: [0.0, 0.0, 0.0]
     camera: track
 
   - name: flat_turn_fixed
     out: phonebot_flat_turn_fixed.mp4
-    command: [0.0, 0.0, 0.75]
+    command: [0.0, 0.0, 1.5]
     start_pose: [0.0, 0.0, 0.0]
     camera: null
 

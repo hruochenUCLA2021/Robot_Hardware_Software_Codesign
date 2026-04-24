@@ -37,6 +37,9 @@ def default_config() -> config_dict.ConfigDict:
       motor_params_path=os.path.join(os.path.dirname(__file__), "phonebot_motor_defaults.yaml"),
       # tracking_sigma=1.0,   # if tracking is poor and the error distribution is big, slightly increasing the sigma can help ! 
       tracking_sigma=0.25,
+      # tracking_sigma=0.125,
+
+
       noise_config=config_dict.create(
           level=0.4,
           scales=config_dict.create(
@@ -55,34 +58,40 @@ def default_config() -> config_dict.ConfigDict:
       reward_config=config_dict.create(
           scales=config_dict.create(
               # tracking_lin_vel=10.0,
+              tracking_lin_vel=4.0,
               # tracking_lin_vel=2.0,
-              tracking_lin_vel=1.0,
+              # tracking_lin_vel=1.0,
               # tracking_ang_vel=5.0,
+              tracking_ang_vel=4.0,
+              # tracking_ang_vel=2.0,
               # tracking_ang_vel=1.0,
-              tracking_ang_vel=0.5,
+              # tracking_ang_vel=0.5,
               lin_vel_z=-0.2,
               ang_vel_xy=-0.1,
               orientation=-1.0,
               # Energy-related penalties (HERMES style). Keep 0 by default; tune later.
               # torques=0.0,
-              # torques=-0.0001,
-              torques=-0.1,
-              torques_square=-0.01,
+              torques=-0.0001,
+              # torques=-0.1,
+              # torques_square=-0.01,
+              torques_square=-0.0001,
 
               energy=0.0,
-              energy_square=-0.01,
+              # energy_square=-0.01,
+              energy_square=-0.0001,
               action_rate=-0.01,
 
               # dof_acc=0.0,
-              # dof_acc=-0.00000001,
-              dof_acc=-0.000004,
+              dof_acc=-0.00000001,
+              # dof_acc=-0.000004,
               # dof_vel=0.0,
               # dof_vel=-0.00001,
               dof_vel=-0.0001,
               # dof_vel=-0.01,
 
               # feet_air_time=50.0,
-              feet_air_time=20.0,
+              feet_air_time=40.0,
+              # feet_air_time=20.0,
               # feet_air_time=2.0,
               # Foot-related costs (tune later).
               feet_clearance=-0.05,
@@ -113,17 +122,25 @@ def default_config() -> config_dict.ConfigDict:
       push_config=config_dict.create(
           enable=True,
           # enable=False,
-          interval_range=[5.0, 10.0],
-          magnitude_range=[0.05, 0.2], # add small push to the robot
+          # interval_range=[5.0, 10.0],
+          interval_range=[5.0, 20.0],
+          magnitude_range=[0.05, 0.3], # add small push to the robot
+          # magnitude_range=[0.05, 0.2], # add small push to the robot
+          # magnitude_range=[0.01, 0.1], # add small push to the robot
           # magnitude_range=[0.1, 1.0],
       ),
       # lin_vel_x=[-1.0, 1.0],
       # lin_vel_y=[-0.5, 0.5],
       # ang_vel_yaw=[-1.0, 1.0],
 
-      lin_vel_x=[-0.5, 0.5],
-      lin_vel_y=[-0.25, 0.25],
-      ang_vel_yaw=[-1.0, 1.0],
+      # lin_vel_x=[-0.5, 0.5],
+      # lin_vel_y=[-0.25, 0.25],
+      # ang_vel_yaw=[-1.0, 1.0],
+
+
+      lin_vel_x=[-1.0, 1.0],
+      lin_vel_y=[-0.5, 0.5],
+      ang_vel_yaw=[-1.5, 1.5],
   )
 
 
