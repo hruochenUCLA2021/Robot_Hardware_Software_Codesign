@@ -193,6 +193,7 @@ model_modification/mjcf/robot_realtime_state_saved_in_simulate/*
 !models/assets/**/*.png
 !models/model_phonebot/assets/**/*.png
 !models/model_phonebot_fred_v2/assets/**/*.png
+!models/model_phonebot_fred_v2_torque_version/assets/**/*.png
 
 *.gif
 
