@@ -22,7 +22,7 @@ class TorqueLimitedPDParams:
   kp: jp.ndarray
   kd: jp.ndarray
   kd_min: jp.ndarray
-  passive_active_ratio: float
+  passive_active_ratio: jp.ndarray | float
 
   # Acceleration-side torque-speed envelope
   tau_max: jp.ndarray
@@ -64,7 +64,10 @@ class TorqueLimitedPDController:
     kp = self._p.kp * n.get("kp", 1.0)
     kd = self._p.kd * n.get("kd", 1.0)
     kd_min = self._p.kd_min * n.get("kd_min", 1.0)
-    passive_active_ratio = self._p.passive_active_ratio * float(n.get("passive_active_ratio", 1.0))
+    # Keep this JAX-friendly: noise values may be per-DOF arrays.
+    passive_active_ratio = jp.asarray(self._p.passive_active_ratio) * jp.asarray(
+        n.get("passive_active_ratio", 1.0)
+    )
 
     tau_max = self._p.tau_max * n.get("tau_max", 1.0)
     q_dot_tau_max = self._p.q_dot_tau_max * n.get("q_dot_tau_max", 1.0)
