@@ -2,11 +2,8 @@
   <default>
     <default class="robot">
       <default class="motor">
-        <!-- Torque-controlled servo model (XL430-family proxy).
-             Joint passive terms are tuned to ToddlerBot's 2XL430 sysID values. -->
-        <joint stiffness="0" damping="0.0013" frictionloss="0.069" armature="0.0083" />
-        <!-- Motor actuator: ctrl is torque (Nm). Keep ctrlrange wide; clamp in controller code. -->
-        <motor ctrlrange="-10 10" />
+        <joint stiffness="0" damping="0.01" frictionloss="0.01" armature="0.02" />
+        <motor />
       </default>
       <default class="visual">
         <geom material="visualgeom" contype="0" conaffinity="0" group="2" />
@@ -42,8 +39,6 @@
   <worldbody>
     <body name="base_motor_link" pos="0.00000000 0.00000000 0.23100056" quat="1 0 0 0" childclass="robot">
       <freejoint name="floating_base" />
-      <site name="imu" pos="0 0 0" quat="1.0 0.0 0.0 0.0" />
-      <!-- <site name="imu" pos="0 0 0" quat="0.707107 0.000000 0.000000 0.707107" /> -->
       <!-- Track camera (like HERMES/T1). -->
       <camera name="track" mode="trackcom"
               pos="0.947000 1.248000 0.500000"
@@ -162,9 +157,11 @@
       </body>
 
       <body name="trunk_link" pos="0 0 0.0205" quat="1 0 0 0">
+        <site name="imu" pos="0 0 0" quat="1.0 0.0 0.0 0.0" />
+        <!-- <site name="imu" pos="0 0 0" quat="0.707107 0.000000 0.000000 0.707107" /> -->
         <joint name="base_to_trunk" type="hinge" ref="0.0" class="motor" range="-3.142 3.142" axis="0 0 1" />
-        <inertial pos="0.0239810392101233 -0.000117764708118906 0.0586310766784631" quat="1 0 0 0" mass="0.337885464655817"
-                 diaginertia="0.000548340450653991 0.000379245344215494 0.000238076279130959" />
+        <inertial pos="0.0218668011738023 -0.000431568318375537 0.05417319466971" quat="1 0 0 0" mass="0.386680464655816"
+                 diaginertia="0.000620927600653995 0.000390567916715494 0.000310705669130959" />
         <!-- <geom name="trunk_link_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="Body_Link.STL" class="collision" /> -->
         <geom name="trunk_link_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="Body_Link.STL" class="visual" />
       </body>
@@ -175,21 +172,21 @@
     </body>
   </worldbody>
 
-  <!-- Torque actuators (ctrl = torque). Names match legacy for logging/rollout. -->
+  <!-- Match the old controller-style position actuators + names. -->
   <actuator>
-    <motor name="l_hip_pitch" joint="l_hip_pitch_joint" />
-    <motor name="l_hip_roll" joint="l_hip_roll_joint" />
-    <motor name="l_hip_thigh" joint="l_hip_thigh_joint" />
-    <motor name="l_hip_calf" joint="l_hip_calf_joint" />
-    <motor name="l_ankle_pitch" joint="l_ankle_pitch_joint" />
-    <motor name="l_ankle_roll" joint="l_ankle_roll_joint" />
-    <motor name="r_hip_pitch" joint="r_hip_pitch_joint" />
-    <motor name="r_hip_roll" joint="r_hip_roll_joint" />
-    <motor name="r_hip_thigh" joint="r_hip_thigh_joint" />
-    <motor name="r_hip_calf" joint="r_hip_calf_joint" />
-    <motor name="r_ankle_pitch" joint="r_ankle_pitch_joint" />
-    <motor name="r_ankle_roll" joint="r_ankle_roll_joint" />
-    <motor name="base_to_trunk" joint="base_to_trunk" />
+    <position name="l_hip_pitch" joint="l_hip_pitch_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="l_hip_roll" joint="l_hip_roll_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="l_hip_thigh" joint="l_hip_thigh_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="l_hip_calf" joint="l_hip_calf_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="l_ankle_pitch" joint="l_ankle_pitch_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="l_ankle_roll" joint="l_ankle_roll_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="r_hip_pitch" joint="r_hip_pitch_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="r_hip_roll" joint="r_hip_roll_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="r_hip_thigh" joint="r_hip_thigh_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="r_hip_calf" joint="r_hip_calf_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="r_ankle_pitch" joint="r_ankle_pitch_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="r_ankle_roll" joint="r_ankle_roll_joint" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
+    <position name="base_to_trunk" joint="base_to_trunk" kp="5" kv="0" ctrlrange="-3.14159 3.14159" />
   </actuator>
 
   <contact>

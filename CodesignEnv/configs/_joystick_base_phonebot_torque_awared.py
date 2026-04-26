@@ -35,6 +35,19 @@ def default_config() -> config_dict.ConfigDict:
       home_keyframe_name="home",
       # Torque controller parameters are loaded from this YAML at env init time.
       motor_params_path=os.path.join(os.path.dirname(__file__), "phonebot_motor_defaults.yaml"),
+      # Per-episode motor/controller noise (ToddlerBot-style multiplicative factors).
+      actuator_noise_config=config_dict.create(
+          enable=True,
+          kp_range=[0.9, 1.1],
+          kd_range=[0.9, 1.1],
+          tau_max_range=[0.9, 1.1],
+          q_dot_tau_max_range=[0.9, 1.1],
+          q_dot_max_range=[0.9, 1.1],
+          kd_min_range=[0.9, 1.1],
+          tau_brake_max_range=[0.9, 1.1],
+          tau_q_dot_max_range=[0.9, 1.1],
+          passive_active_ratio_range=[0.5, 1.5],
+      ),
       # tracking_sigma=1.0,   # if tracking is poor and the error distribution is big, slightly increasing the sigma can help ! 
       tracking_sigma=0.25,
       # tracking_sigma=0.125,
@@ -308,7 +321,29 @@ class BaseJoystick(hi_base.HiEnv):
         "push": jp.array([0.0, 0.0], dtype=jp.float32),
         "push_step": jp.asarray(0, dtype=jp.int32),
         "push_interval_steps": push_interval_steps,
+        # ToddlerBot-style actuator/controller noise (multiplicative scales).
+        "actuator_noise": {},
     }
+    # Sample per-episode actuator noise scales (vector of size nu).
+    try:
+      anc = self._config.actuator_noise_config
+      if bool(getattr(anc, "enable", False)) and int(self.mjx_model.nu) > 0:
+        info["rng"], n1, n2, n3, n4, n5, n6, n7, n8, n9 = jax.random.split(info["rng"], 10)
+        nu = int(self.mjx_model.nu)
+        u = lambda k, lo, hi: jax.random.uniform(k, (nu,), minval=float(lo), maxval=float(hi))
+        info["actuator_noise"] = {
+            "kp": u(n1, anc.kp_range[0], anc.kp_range[1]),
+            "kd": u(n2, anc.kd_range[0], anc.kd_range[1]),
+            "tau_max": u(n3, anc.tau_max_range[0], anc.tau_max_range[1]),
+            "q_dot_tau_max": u(n4, anc.q_dot_tau_max_range[0], anc.q_dot_tau_max_range[1]),
+            "q_dot_max": u(n5, anc.q_dot_max_range[0], anc.q_dot_max_range[1]),
+            "kd_min": u(n6, anc.kd_min_range[0], anc.kd_min_range[1]),
+            "tau_brake_max": u(n7, anc.tau_brake_max_range[0], anc.tau_brake_max_range[1]),
+            "tau_q_dot_max": u(n8, anc.tau_q_dot_max_range[0], anc.tau_q_dot_max_range[1]),
+            "passive_active_ratio": u(n9, anc.passive_active_ratio_range[0], anc.passive_active_ratio_range[1]),
+        }
+    except Exception:
+      info["actuator_noise"] = {}
     metrics = {f"reward/{k}": jp.zeros(()) for k in self._config.reward_config.scales.keys()}
     metrics["swing_peak"] = jp.zeros(())
     obs = self._get_obs(data, info, contact)
@@ -347,7 +382,7 @@ class BaseJoystick(hi_base.HiEnv):
     q_dot = state.data.qvel[6:]
     qacc_all = getattr(state.data, "qacc", None)
     q_dot_dot = jp.zeros_like(q_dot) if qacc_all is None else qacc_all[6:]
-    tau = self._motor_controller.step(q, q_dot, q_dot_dot, motor_targets, noise={})
+    tau = self._motor_controller.step(q, q_dot, q_dot_dot, motor_targets, noise=state.info.get("actuator_noise", {}))
     data = mjx_env.step(self.mjx_model, state.data, tau, self.n_substeps)
 
     left_contact = jp.any(jp.array([geoms_colliding(data, gid, self._floor_geom_id) for gid in self._left_feet_geom_id]))

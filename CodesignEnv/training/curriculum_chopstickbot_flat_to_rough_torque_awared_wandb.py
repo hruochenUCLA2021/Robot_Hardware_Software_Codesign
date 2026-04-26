@@ -46,7 +46,7 @@ if _PROJECT_ROOT not in sys.path:
   sys.path.insert(0, _PROJECT_ROOT)
 
 from CodesignEnv import registry as env_registry
-from CodesignEnv.configs import hi_randomize
+from CodesignEnv.configs import hi_randomize_torque_awared as hi_randomize
 
 
 def _configure_jax():
