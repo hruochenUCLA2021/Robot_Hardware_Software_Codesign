@@ -12,6 +12,7 @@ import jax
 import jax.numpy as jp
 from ml_collections import config_dict
 from mujoco import mjx
+from mujoco.mjx._src import math
 import numpy as np
 
 from mujoco_playground._src import mjx_env
@@ -198,6 +199,18 @@ class BaseJoystick(hi_base.HiEnv):
   def reset(self, rng: jax.Array) -> mjx_env.State:
     qpos = self._init_q
     qvel = jp.zeros(self.mjx_model.nv)
+
+    # Randomize base XY + yaw, plus base velocity (HERMES-style).
+    rng, key = jax.random.split(rng)
+    dxy = jax.random.uniform(key, (2,), minval=-0.5, maxval=0.5)
+    qpos = qpos.at[0:2].set(qpos[0:2] + dxy)
+    rng, key = jax.random.split(rng)
+    yaw = jax.random.uniform(key, (1,), minval=-jp.pi, maxval=jp.pi)
+    quat = math.axis_angle_to_quat(jp.array([0.0, 0.0, 1.0], dtype=qpos.dtype), yaw)
+    new_quat = math.quat_mul(qpos[3:7], quat)
+    qpos = qpos.at[3:7].set(new_quat)
+    rng, key = jax.random.split(rng)
+    qvel = qvel.at[0:6].set(jax.random.uniform(key, (6,), minval=-0.5, maxval=0.5))
 
     # Phase (gait clock) like HERMES NoLinearVel.
     rng, key = jax.random.split(rng)
