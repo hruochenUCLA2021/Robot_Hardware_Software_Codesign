@@ -4,12 +4,10 @@
 from __future__ import annotations
 
 import functools
-import os
 import sys
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-import traceback
 
 import numpy as np
 import rclpy
@@ -156,17 +154,6 @@ class KeyboardTeleop:
         wz = (float(a) - float(d)) * s * self._max_wz
         return TeleopCommand(vx=vx, vy=vy, wz=wz)
 
-    def stop(self) -> None:
-        """Stop the key listener (best-effort)."""
-        with self._lock:
-            self._running = False
-            self._pressed.clear()
-        try:
-            if self._listener is not None:
-                self._listener.stop()
-        except Exception:
-            pass
-
 
 class PhonebotRealtimeMujocoNode(Node):
     """Run MuJoCo CPU sim and drive a trained joystick policy in real time."""
@@ -194,9 +181,6 @@ class PhonebotRealtimeMujocoNode(Node):
         )
         self.declare_parameter("task", "flat_terrain_alternative_imu_fv2_torque")
         self.declare_parameter("checkpoint_dir", "")
-        self.declare_parameter("policy_format", "auto")  # auto|brax|tflite
-        self.declare_parameter("tflite_num_threads", 1)
-        self.declare_parameter("tflite_backend", "auto")  # auto|litert|tflite_runtime|tensorflow
         self.declare_parameter("home_keyframe_name", "home")
         self.declare_parameter("render", True)
         self.declare_parameter("control_hz", 50.0)
@@ -212,7 +196,6 @@ class PhonebotRealtimeMujocoNode(Node):
         env_name = str(self.get_parameter("env_name").value)
         task = str(self.get_parameter("task").value)
         ckpt_dir = str(self.get_parameter("checkpoint_dir").value)
-        policy_format = str(self.get_parameter("policy_format").value).lower().strip()
         home_keyframe_name = str(self.get_parameter("home_keyframe_name").value)
         render = bool(self.get_parameter("render").value)
 
@@ -228,7 +211,6 @@ class PhonebotRealtimeMujocoNode(Node):
         self.get_logger().info(f"env_name: {env_name}")
         self.get_logger().info(f"task: {task}")
         self.get_logger().info(f"checkpoint_dir: {ckpt_dir}")
-        self.get_logger().info(f"policy_format: {policy_format}")
         self.get_logger().info(f"home_keyframe_name: {home_keyframe_name}")
         self.get_logger().info(
             f"control_hz={control_hz:.1f} sim_hz={sim_hz:.1f} "
@@ -263,9 +245,7 @@ class PhonebotRealtimeMujocoNode(Node):
         xml_path = self._mjx_env.xml_path
         self.get_logger().info(f"Using XML: {xml_path}")
 
-        self._policy_backend = "brax"
-        self._policy = None
-        self._tflite = None
+        self._policy = self._load_policy(ckpt_dir)
 
         # MuJoCo CPU sim.
         self._mj_model = self._mujoco.MjModel.from_xml_path(xml_path)
@@ -316,210 +296,15 @@ class PhonebotRealtimeMujocoNode(Node):
                 self._mj_model, self._mj_data
             )
 
-        # Load policy after viewer initialization (helps avoid some native-lib
-        # initialization conflicts on certain systems when using TensorFlow).
-        self.get_logger().info("[POLICY] Loading policy (may take a while on first run)...")
-        self._policy = self._load_policy(policy_path=ckpt_dir, policy_format=policy_format)
-        self.get_logger().info(f"[POLICY] Ready (backend={self._policy_backend})")
-
         self._rng = self._jax.random.PRNGKey(0)
         self.create_timer(self._ctrl_dt, self._on_timer)
-        self.get_logger().info("[SIM] Control loop timer started.")
 
-    def _cleanup(self) -> None:
-        """Best-effort cleanup for Ctrl+C / shutdown."""
-        try:
-            if getattr(self, "_teleop", None) is not None:
-                self._teleop.stop()
-        except Exception:
-            pass
-        try:
-            if getattr(self, "_viewer", None) is not None:
-                # Safe to call without lock per MuJoCo docs.
-                self._viewer.close()
-        except Exception:
-            pass
-
-    def _is_orbax_leaf_dir(self, p: Path) -> bool:
-        if not p.exists() or not p.is_dir():
-            return False
-        return (p / "_CHECKPOINT_METADATA").exists() or (p / "_METADATA").exists() or (p / "manifest.ocdbt").exists()
-
-    def _resolve_checkpoint_leaf_dir(self, p: Path) -> Path:
-        """Accept leaf dir, parent with `final/`, or parent with numeric leaves."""
-        p = Path(p).expanduser().resolve()
-        if self._is_orbax_leaf_dir(p):
-            return p
-        if (p / "final").exists() and self._is_orbax_leaf_dir(p / "final"):
-            return (p / "final").resolve()
-        numeric = []
-        try:
-            for c in p.iterdir():
-                if c.is_dir() and c.name.isdigit() and self._is_orbax_leaf_dir(c):
-                    numeric.append((int(c.name), c))
-        except Exception:
-            numeric = []
-        if numeric:
-            numeric.sort(key=lambda x: x[0])
-            return numeric[-1][1].resolve()
-        return p
-
-    def _load_policy(self, *, policy_path: str, policy_format: str):
-        """Load policy from either a Brax checkpoint dir or a TFLite model file.
-
-        - Brax: if `ppo_network_config.json` exists, try `ppo_checkpoint.load_policy`
-          first, else fallback to `ppo.train(... restore_checkpoint_path=...)`.
-        - TFLite: load a TF Lite Interpreter and run inference on obs['state'].
-        """
-        policy_format = (policy_format or "auto").lower().strip()
-        p = Path(policy_path).expanduser()
-
-        # Auto detect: treat *.tflite as TFLite policy.
-        if policy_format == "auto":
-            if str(p).lower().endswith(".tflite") or p.is_file():
-                policy_format = "tflite"
-            else:
-                policy_format = "brax"
-
-        if policy_format == "tflite":
-            model_path = p.resolve()
-            if not model_path.exists():
-                raise FileNotFoundError(f"TFLite model not found: {model_path}")
-
-            num_threads = int(self.get_parameter("tflite_num_threads").value)
-            backend = str(self.get_parameter("tflite_backend").value).lower().strip()
-
-            # Prefer lightweight interpreter to avoid TensorFlow import hangs
-            # inside ROS2 + MuJoCo viewer processes.
-            interp = None
-            last_err = None
-
-            if backend in ("auto", "litert"):
-                try:
-                    self.get_logger().info("[POLICY][TFLITE] Using LiteRT (ai-edge-litert) interpreter...")
-                    from ai_edge_litert.interpreter import Interpreter  # type: ignore
-
-                    interp = Interpreter(model_path=str(model_path), num_threads=num_threads)
-                except Exception as e:  # pylint: disable=broad-except
-                    last_err = e
-                    self.get_logger().warn(
-                        "[POLICY][TFLITE] LiteRT import/use failed. "
-                        f"{type(e).__name__}: {e}"
-                    )
-                    if backend == "litert":
-                        raise RuntimeError(
-                            "Failed to import/use LiteRT. Install with: pip install ai-edge-litert"
-                        ) from e
-
-            if interp is None and backend in ("auto", "tflite_runtime"):
-                try:
-                    self.get_logger().info("[POLICY][TFLITE] Using tflite_runtime interpreter...")
-                    from tflite_runtime.interpreter import Interpreter  # type: ignore
-
-                    interp = Interpreter(model_path=str(model_path), num_threads=num_threads)
-                except Exception as e:  # pylint: disable=broad-except
-                    last_err = e
-                    self.get_logger().warn(
-                        "[POLICY][TFLITE] tflite_runtime failed. "
-                        f"{type(e).__name__}: {e}"
-                    )
-                    if backend == "tflite_runtime":
-                        raise RuntimeError(
-                            "Failed to import/use tflite_runtime. Install with: pip install tflite-runtime"
-                        ) from e
-
-            if interp is None:
-                if backend not in ("auto", "tensorflow"):
-                    raise ValueError("tflite_backend must be auto|litert|tflite_runtime|tensorflow")
-                # IMPORTANT: TensorFlow import can hang in this ROS2+MuJoCo viewer
-                # process on some systems. If auto couldn't use tflite_runtime,
-                # fail fast with actionable guidance instead of freezing.
-                if backend == "auto":
-                    msg = (
-                        "tflite_backend=auto could not use LiteRT or tflite_runtime, and falling back to "
-                        "TensorFlow is disabled to avoid a known hang at `import tensorflow` in "
-                        "this realtime viewer process.\n"
-                        "Fix (recommended for Python 3.12): install LiteRT into the same Python env used by `ros2 run`, "
-                        "then run with: -p tflite_backend:=litert\n"
-                        "Alternative: install tflite-runtime (often not available for Python 3.12) and run with: "
-                        "-p tflite_backend:=tflite_runtime\n"
-                    )
-                    if last_err is not None:
-                        msg += f"(tflite_runtime error: {type(last_err).__name__}: {last_err})"
-                    raise RuntimeError(msg)
-                try:
-                    # Avoid TF trying to initialize CUDA/OpenGL interop in the same
-                    # process as the MuJoCo viewer. This can hang or crash on some setups.
-                    os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
-                    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "1")
-                    self.get_logger().info("[POLICY][TFLITE] Importing tensorflow (CPU-only)...")
-                    import tensorflow as tf  # pylint: disable=import-error
-
-                    self.get_logger().info(
-                        f"[POLICY][TFLITE] TensorFlow imported: {getattr(tf, '__version__', 'unknown')}"
-                    )
-                    self.get_logger().info(
-                        f"[POLICY][TFLITE] Creating TF Lite Interpreter (threads={num_threads})..."
-                    )
-                    interp = tf.lite.Interpreter(
-                        model_path=str(model_path), num_threads=num_threads
-                    )
-                except Exception as e:  # pylint: disable=broad-except
-                    msg = (
-                        "Failed to import/use TensorFlow for TFLite inference. "
-                        "Try installing tflite-runtime and set -p tflite_backend:=tflite_runtime."
-                    )
-                    if last_err is not None:
-                        msg += f" (tflite_runtime error was: {type(last_err).__name__}: {last_err})"
-                    raise RuntimeError(msg) from e
-
-            self.get_logger().info("[POLICY][TFLITE] Allocating tensors...")
-            interp.allocate_tensors()
-            self.get_logger().info("[POLICY][TFLITE] Interpreter ready.")
-            in_details = interp.get_input_details()
-            out_details = interp.get_output_details()
-            if len(in_details) != 1 or len(out_details) != 1:
-                raise ValueError("Expected 1 input + 1 output tensor for TFLite policy.")
-
-            self._tflite = {
-                "interp": interp,
-                "idx_in": int(in_details[0]["index"]),
-                "idx_out": int(out_details[0]["index"]),
-                "in_shape": tuple(int(s) for s in in_details[0]["shape"]),
-            }
-            self._policy_backend = "tflite"
-            self.get_logger().info(f"[POLICY] Loaded TFLite model: {model_path}")
-            return None
-
-        if policy_format != "brax":
-            raise ValueError("policy_format must be auto|brax|tflite")
-
-        # Brax checkpoint loading.
+    def _load_policy(self, ckpt_dir: str):
+        """Restore a Brax PPO policy from checkpoint dir."""
         from brax.training.agents.ppo import networks as ppo_networks
-        from brax.training.agents.ppo import checkpoint as ppo_checkpoint
         from brax.training.agents.ppo import train as ppo_train
         from mujoco_playground import wrapper
         from mujoco_playground.config import locomotion_params
-
-        ckpt_leaf = self._resolve_checkpoint_leaf_dir(p)
-        json_path = ckpt_leaf / "ppo_network_config.json"
-        if json_path.exists():
-            try:
-                self.get_logger().info(f"[POLICY] Found {json_path}; trying ppo_checkpoint.load_policy")
-                policy = ppo_checkpoint.load_policy(str(ckpt_leaf), deterministic=True)
-                policy = self._jax.jit(policy)
-                self._policy_backend = "brax"
-                self.get_logger().info("[POLICY] Loaded via ppo_checkpoint.load_policy")
-                return policy
-            except Exception as e:  # pylint: disable=broad-except
-                self.get_logger().warn(
-                    f"[POLICY] ppo_checkpoint.load_policy failed; falling back to ppo.train restore. "
-                    f"{type(e).__name__}: {e}"
-                )
-        else:
-            self.get_logger().info(
-                f"[POLICY] Missing ppo_network_config.json at {json_path}; using ppo.train restore"
-            )
 
         ppo_params = locomotion_params.brax_ppo_config("T1JoystickFlatTerrain")
         if "network_factory" in ppo_params:
@@ -551,11 +336,9 @@ class PhonebotRealtimeMujocoNode(Node):
             environment=self._mjx_env,
             eval_env=self._mjx_env,
             wrap_env_fn=wrapper.wrap_for_brax_training,
-            restore_checkpoint_path=str(ckpt_leaf),
+            restore_checkpoint_path=str(Path(ckpt_dir).expanduser()),
         )
         policy = self._jax.jit(make_inf(params, deterministic=True))
-        self._policy_backend = "brax"
-        self.get_logger().info("[POLICY] Loaded via ppo.train restore")
         return policy
 
     def _soft_joint_limits(self) -> tuple[np.ndarray, np.ndarray]:
@@ -599,33 +382,11 @@ class PhonebotRealtimeMujocoNode(Node):
         return state
 
     def _on_timer(self) -> None:
-        try:
-            if self._viewer is not None and not self._viewer.is_running():
-                self.get_logger().info("Viewer closed; shutting down.")
-                self._cleanup()
-                rclpy.shutdown()
-                return
-
-            if not self._teleop.running:
-                self.get_logger().info("Teleop exit requested; shutting down.")
-                self._cleanup()
-                rclpy.shutdown()
-                return
-
-            # If viewer exists, lock while touching mjModel/mjData.
-            lock_ctx = self._viewer.lock() if self._viewer is not None else None
-            if lock_ctx is None:
-                return self._on_timer_unlocked()
-            with lock_ctx:
-                return self._on_timer_unlocked()
-        except Exception as e:  # pylint: disable=broad-except
-            self.get_logger().error(f"[TIMER] Exception: {type(e).__name__}: {e}")
-            self.get_logger().error(traceback.format_exc())
-            self._cleanup()
+        if not self._teleop.running:
+            self.get_logger().info("Teleop exit requested; shutting down.")
             rclpy.shutdown()
+            return
 
-    def _on_timer_unlocked(self) -> None:
-        """Timer logic assuming it's safe to access mjModel/mjData."""
         cmd = self._teleop.get_command()
 
         cmd_norm = float(np.linalg.norm([cmd.vx, cmd.vy, cmd.wz]))
@@ -643,24 +404,7 @@ class PhonebotRealtimeMujocoNode(Node):
             "privileged_state": self._jp.asarray(obs_state),
         }
 
-        if self._policy_backend == "tflite":
-            t = self._tflite
-            if t is None:
-                raise RuntimeError("TFLite backend selected but interpreter not initialized.")
-            x = np.asarray(obs_state, dtype=np.float32)
-            in_shape = t["in_shape"]
-            if len(in_shape) == 2:
-                x = x.reshape((1, -1))
-            if tuple(x.shape) != tuple(in_shape):
-                raise ValueError(f"TFLite input shape mismatch: expects {in_shape}, got {x.shape}")
-            t["interp"].set_tensor(t["idx_in"], x)
-            t["interp"].invoke()
-            y = t["interp"].get_tensor(t["idx_out"])
-            action = np.asarray(y, dtype=np.float32).reshape((-1,))
-        else:
-            if self._policy is None:
-                raise RuntimeError("Brax backend selected but policy is not loaded.")
-            action = np.array(self._policy(obs, self._rng)[0], dtype=np.float32)
+        action = np.array(self._policy(obs, self._rng)[0], dtype=np.float32)
         action = action.reshape((-1,))
 
         motor_targets = self._default_pose + action * float(
@@ -690,15 +434,7 @@ def main(args=None) -> None:
     rclpy.init(args=args)
     node = PhonebotRealtimeMujocoNode()
     try:
-        from rclpy.executors import MultiThreadedExecutor
-
-        executor = MultiThreadedExecutor(num_threads=2)
-        executor.add_node(node)
-        executor.spin()
-    except KeyboardInterrupt:
-        # Ensure Ctrl+C always triggers cleanup.
-        node.get_logger().info("KeyboardInterrupt received; cleaning up.")
-        node._cleanup()
+        rclpy.spin(node)
     finally:
         node.destroy_node()
         rclpy.shutdown()

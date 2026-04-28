@@ -1,6 +1,6 @@
 {
-  "env_name": "PhonebotJoystickFlatTerrainAlter",
-  "checkpoint_dir": "/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/checkpoints/PhonebotJoystickFlatTerrainAlter_flat_v2",
+  "env_name": "PhonebotJoystickFlatTerrainAlterFV2TorqueAwared",
+  "checkpoint_dir": "/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat_curriculum_v1_home_straight_v1",
   "policy_obs_key": "state",
   "value_obs_key": "privileged_state",
   "state_dim": 52,

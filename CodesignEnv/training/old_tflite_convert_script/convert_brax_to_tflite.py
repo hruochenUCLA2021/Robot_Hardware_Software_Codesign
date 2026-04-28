@@ -35,7 +35,6 @@ from etils import epath
 from ml_collections import config_dict
 
 from brax.training.agents.ppo import networks as ppo_networks
-from brax.training.agents.ppo import checkpoint as ppo_checkpoint
 from brax.training.agents.ppo import train as ppo
 from jax.experimental import jax2tf
 
@@ -93,7 +92,6 @@ def _load_policy(
     env_name: str,
     env_config_path: str | None,
 ):
-  ckpt_dir = _resolve_ckpt_leaf_dir(epath.Path(ckpt_dir))
   EnvClass, default_config = env_registry.get_environment(env_name)
   env_cfg = default_config()
 
@@ -135,78 +133,7 @@ def _load_policy(
       restore_checkpoint_path=ckpt_dir,
   )
   print(f"[LOAD] {env_name} from {ckpt_dir}")
-  normalize_observations = bool(ppo_params.get("normalize_observations", True))
-  return env, env_cfg, make_inference_fn, params, network_factory, normalize_observations
-
-
-def _is_orbax_leaf_dir(p: epath.Path) -> bool:
-  """Heuristic: does this directory look like an Orbax checkpoint leaf?"""
-  if not p.exists() or not p.is_dir():
-    return False
-  # Typical Orbax artifacts (OCDBT format).
-  return (p / "_CHECKPOINT_METADATA").exists() or (p / "_METADATA").exists() or (p / "manifest.ocdbt").exists()
-
-
-def _resolve_ckpt_leaf_dir(p: epath.Path) -> epath.Path:
-  """Accept either leaf dir or a parent containing `final/` or numeric leaves."""
-  p = epath.Path(p)
-  try:
-    if not p.is_absolute():
-      p = p.resolve()
-  except Exception:
-    pass
-  if _is_orbax_leaf_dir(p):
-    return p
-  if (p / "final").exists() and _is_orbax_leaf_dir(p / "final"):
-    return p / "final"
-  # Common layout: parent contains numeric checkpoint subdirs (0, 1000000, ...)
-  try:
-    if p.exists() and p.is_dir():
-      numeric_leaves: list[tuple[int, epath.Path]] = []
-      for child in p.iterdir():
-        if not child.is_dir():
-          continue
-        name = child.name
-        if name.isdigit() and _is_orbax_leaf_dir(child):
-          numeric_leaves.append((int(name), child))
-      if numeric_leaves:
-        numeric_leaves.sort(key=lambda x: x[0])
-        return numeric_leaves[-1][1]
-  except Exception:
-    pass
-  return p
-
-
-def _maybe_write_ppo_network_config_json(
-    *,
-    ckpt_dir: epath.Path,
-    mode: str,
-    observation_size: int,
-    action_size: int,
-    normalize_observations: bool,
-    network_factory,
-):
-  """Write/replace `ppo_network_config.json` next to an Orbax checkpoint leaf."""
-  mode = str(mode or "skip").lower()
-  if mode not in ("skip", "if_missing", "replace"):
-    raise ValueError("export.ppo_network_config_json.mode must be one of: skip, if_missing, replace")
-  if mode == "skip":
-    return
-
-  ckpt_dir = _resolve_ckpt_leaf_dir(epath.Path(ckpt_dir))
-  out_path = ckpt_dir / "ppo_network_config.json"
-  if mode == "if_missing" and out_path.exists():
-    print(f"[JSON] exists, leaving as-is: {out_path}")
-    return
-
-  cfg_json = ppo_checkpoint.network_config(
-      observation_size=int(observation_size),
-      action_size=int(action_size),
-      normalize_observations=bool(normalize_observations),
-      network_factory=network_factory,
-  )
-  out_path.write_text(cfg_json.to_json_best_effort(), encoding="utf-8")
-  print(f"[JSON] wrote: {out_path}")
+  return env, env_cfg, make_inference_fn, params
 
 
 def _infer_expected_state_dim(policy_raw, state_obs: dict[str, jp.ndarray]) -> int:
@@ -249,9 +176,8 @@ def export_actor_tflite(
     input_mode: str,
     use_select_tf_ops: bool,
     optimize: bool,
-    ppo_network_config_json_mode: str,
 ):
-  env, env_cfg, make_inf, params, network_factory, normalize_observations = _load_policy(
+  env, env_cfg, make_inf, params = _load_policy(
       ckpt_dir, env_name=env_name, env_config_path=env_config_path
   )
   policy_raw = make_inf(params, deterministic=True)
@@ -269,15 +195,6 @@ def export_actor_tflite(
   print(f"[EXPORT] env_name={env_name}")
   print(f"[EXPORT] expected obs['state'] dim = {expected_state_dim}")
   print(f"[EXPORT] action dim (nu) = {nu}")
-
-  _maybe_write_ppo_network_config_json(
-      ckpt_dir=ckpt_dir,
-      mode=ppo_network_config_json_mode,
-      observation_size=expected_state_dim,
-      action_size=nu,
-      normalize_observations=normalize_observations,
-      network_factory=network_factory,
-  )
 
   if dry_run:
     return
@@ -348,96 +265,45 @@ def main():
       _THIS_DIR, "convert_brax_to_tflite_config.yaml"
   )
   cfg = _load_yaml(cfg_path)
-  job_name = cfg.get("job_name", "")
+  job_name = str(cfg.get("job_name", "")).strip()
   jobs = cfg.get("jobs", {}) or {}
-  if not jobs:
-    raise ValueError("No jobs found in config under `jobs:`")
+  if not job_name or job_name not in jobs:
+    raise ValueError(f"job_name must be one of: {sorted(list(jobs.keys()))}")
 
-  # Allow job_name as:
-  # - string: one job
-  # - list: multiple jobs
-  # - "all": run all jobs
-  job_names: list[str]
-  if isinstance(job_name, list):
-    job_names = [str(x).strip() for x in job_name if str(x).strip()]
-  else:
-    job_name_str = str(job_name).strip()
-    if job_name_str.lower() == "all":
-      job_names = sorted(list(jobs.keys()))
-    else:
-      job_names = [job_name_str] if job_name_str else []
+  job = jobs[job_name]
+  ckpt_dir = epath.Path(job["checkpoint_dir"])
+  if not ckpt_dir.is_absolute():
+    ckpt_dir = epath.Path(_THIS_DIR) / ckpt_dir
+  ckpt_dir = ckpt_dir.resolve()
+  if not ckpt_dir.exists():
+    raise FileNotFoundError(f"Checkpoint directory not found: {ckpt_dir}")
 
-  if not job_names:
-    raise ValueError(f"job_name must be a string, a list of job keys, or 'all'. Available jobs: {sorted(list(jobs.keys()))}")
-
-  missing = [n for n in job_names if n not in jobs]
-  if missing:
-    raise ValueError(f"Unknown job_name(s): {missing}. Available jobs: {sorted(list(jobs.keys()))}")
+  env_name = str(job.get("env_name", "PhonebotJoystickFlatTerrain"))
+  env_config_path = job.get("env_config_path", None)
+  out_dir = job.get("out_dir", "exported_tflite")
+  out_tflite = str(job.get("out_tflite", f"{job_name}.tflite"))
+  out_metadata_json = str(job.get("out_metadata_json", f"{job_name}_metadata.json"))
 
   export_cfg = cfg.get("export", {}) or {}
   dry_run = bool(export_cfg.get("dry_run", False))
   input_mode = str(export_cfg.get("input_mode", "vector"))
   use_select_tf_ops = bool(export_cfg.get("use_select_tf_ops", True))
   optimize = bool(export_cfg.get("optimize", False))
-  ppo_network_config_json_cfg = export_cfg.get("ppo_network_config_json", {}) or {}
-  ppo_network_config_json_mode = str(ppo_network_config_json_cfg.get("mode", "skip"))
-  continue_on_error = bool(export_cfg.get("continue_on_error", True))
 
   print(f"Using config: {cfg_path}")
-  print(f"Jobs: {job_names}")
-
-  failures: list[tuple[str, str]] = []
-  for name in job_names:
-    job = jobs[name]
-    ckpt_dir = epath.Path(job["checkpoint_dir"])
-    if not ckpt_dir.is_absolute():
-      ckpt_dir = epath.Path(_THIS_DIR) / ckpt_dir
-    ckpt_dir = ckpt_dir.resolve()
-    if not ckpt_dir.exists():
-      msg = f"Checkpoint directory not found: {ckpt_dir}"
-      if continue_on_error:
-        print(f"[SKIP] {name}: {msg}")
-        failures.append((name, msg))
-        continue
-      raise FileNotFoundError(msg)
-
-    env_name = str(job.get("env_name", "PhonebotJoystickFlatTerrain"))
-    env_config_path = job.get("env_config_path", None)
-    out_dir = job.get("out_dir", "exported_tflite")
-    out_tflite = str(job.get("out_tflite", f"{name}.tflite"))
-    out_metadata_json = str(job.get("out_metadata_json", f"{name}_metadata.json"))
-
-    print("\n" + "=" * 80)
-    print(f"[JOB] {name}")
-    print("=" * 80)
-    try:
-      export_actor_tflite(
-          ckpt_dir=ckpt_dir,
-          env_name=env_name,
-          env_config_path=env_config_path,
-          out_dir=epath.Path(_THIS_DIR) / out_dir,
-          out_tflite=out_tflite,
-          out_metadata_json=out_metadata_json,
-          dry_run=dry_run,
-          input_mode=input_mode,
-          use_select_tf_ops=use_select_tf_ops,
-          optimize=optimize,
-          ppo_network_config_json_mode=ppo_network_config_json_mode,
-      )
-    except Exception as e:  # pylint: disable=broad-except
-      msg = f"{type(e).__name__}: {e}"
-      if continue_on_error:
-        print(f"[FAIL] {name}: {msg}")
-        failures.append((name, msg))
-        continue
-      raise
-
-  if failures:
-    print("\n" + "=" * 80)
-    print("[DONE] Completed with some failures:")
-    for n, m in failures:
-      print(f"- {n}: {m}")
-    print("=" * 80)
+  print(f"Job: {job_name}")
+  export_actor_tflite(
+      ckpt_dir=ckpt_dir,
+      env_name=env_name,
+      env_config_path=env_config_path,
+      out_dir=epath.Path(_THIS_DIR) / out_dir,
+      out_tflite=out_tflite,
+      out_metadata_json=out_metadata_json,
+      dry_run=dry_run,
+      input_mode=input_mode,
+      use_select_tf_ops=use_select_tf_ops,
+      optimize=optimize,
+  )
 
 
 if __name__ == "__main__":

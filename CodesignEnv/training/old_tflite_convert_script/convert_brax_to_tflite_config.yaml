@@ -1,0 +1,48 @@
+## Convert a trained Brax (PPO) actor policy to TFLite.
+##
+## Usage:
+##   python convert_brax_to_tflite.py
+##   python convert_brax_to_tflite.py convert_brax_to_tflite_config.yaml
+##
+## Notes:
+## - This exports the **actor** (policy) only. The critic ("privileged_state")
+##   is not needed on the real robot.
+## - Input is obs["state"] (PhoneBot: 52 floats).
+## - Output is action (PhoneBot: 13 floats), typically in [-1, 1] due to tanh.
+##
+## You can switch between checkpoints by changing `job_name`.
+
+job_name: phonebot_flat_ok_v6
+# job_name: phonebot_flat_alter_v2
+
+jobs:
+  phonebot_flat_ok_v6:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat_ok_v6/final
+    env_name: PhonebotJoystickFlatTerrain
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_ok_v6_actor.tflite
+    out_metadata_json: phonebot_flat_ok_v6_actor_metadata.json
+
+  phonebot_flat_alter_v2:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat_v2/final
+    env_name: PhonebotJoystickFlatTerrainAlter
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_v2_actor.tflite
+    out_metadata_json: phonebot_flat_alter_v2_actor_metadata.json
+
+export:
+  # If true, only load checkpoint and print shapes (no TFLite export).
+  dry_run: false
+
+  # Input signature for exported TFLite model.
+  # - "vector": input tensor shape (obs_dim,)
+  # - "batch":  input tensor shape (1, obs_dim)  # thsi is the formate that the android app using right now for tflite model !!!
+  # input_mode: vector
+  input_mode: batch
+
+  # TFLite options
+  use_select_tf_ops: true
+  optimize: false
+

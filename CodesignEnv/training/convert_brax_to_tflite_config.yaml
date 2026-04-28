@@ -12,12 +12,22 @@
 ##
 ## You can switch between checkpoints by changing `job_name`.
 
-job_name: phonebot_flat_ok_v6
-# job_name: phonebot_flat_alter_v2
+# job_name can be:
+# - a single string (one job)
+# - a list of strings (multiple jobs)
+# - "all" (run every job under `jobs:`)
+job_name:
+  - phonebot_flat_ok_v6
+  - phonebot_flat_alter_v2
+  - phonebot_flat_alter_fv2
+  - phonebot_flat_alter_fv2_torque_awared_home_straight_v1
+  - phonebot_rough_alter_fv2_torque_awared_home_straight_v1
+  - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
+  - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
 
 jobs:
   phonebot_flat_ok_v6:
-    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat_ok_v6/final
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat_ok_v6
     env_name: PhonebotJoystickFlatTerrain
     env_config_path: null
     out_dir: exported_tflite
@@ -25,16 +35,71 @@ jobs:
     out_metadata_json: phonebot_flat_ok_v6_actor_metadata.json
 
   phonebot_flat_alter_v2:
-    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat_v2/final
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat_v2
     env_name: PhonebotJoystickFlatTerrainAlter
     env_config_path: null
     out_dir: exported_tflite
     out_tflite: phonebot_flat_alter_v2_actor.tflite
     out_metadata_json: phonebot_flat_alter_v2_actor_metadata.json
 
+  phonebot_flat_alter_fv2:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2_flat
+    env_name: PhonebotJoystickFlatTerrainAlterFV2
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_actor_metadata.json
+
+  phonebot_flat_alter_fv2_torque_awared_home_straight_v1:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat_curriculum_v1_home_straight_v1
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor_metadata.json
+
+  phonebot_rough_alter_fv2_torque_awared_home_straight_v1:
+    checkpoint_dir: checkpoints/PhonebotJoystickRoughTerrainAlterFV2TorqueAwared_rough_curriculum_v1_home_straight_v1
+    env_name: PhonebotJoystickRoughTerrainAlterFV2TorqueAwared
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    out_metadata_json: phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor_metadata.json
+
+  chopstickbot_flat_alter_torque_awared_curriculum_v1_v1:
+    checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrainAlterTorqueAwared_flat_curriculum_v1_v1
+    env_name: ChopstickbotJoystickFlatTerrainAlterTorqueAwared
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: chopstickbot_flat_alter_torque_awared_curriculum_v1_v1_actor.tflite
+    out_metadata_json: chopstickbot_flat_alter_torque_awared_curriculum_v1_v1_actor_metadata.json
+
+  chopstickbot_rough_alter_torque_awared_curriculum_v1_v1:
+    checkpoint_dir: checkpoints/ChopstickbotJoystickRoughTerrainAlterTorqueAwared_rough_curriculum_v1_v1
+    env_name: ChopstickbotJoystickRoughTerrainAlterTorqueAwared
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: chopstickbot_rough_alter_torque_awared_curriculum_v1_v1_actor.tflite
+    out_metadata_json: chopstickbot_rough_alter_torque_awared_curriculum_v1_v1_actor_metadata.json
+
 export:
   # If true, only load checkpoint and print shapes (no TFLite export).
   dry_run: false
+
+  # Optionally write `ppo_network_config.json` into the checkpoint leaf directory,
+  # so you can later use `ppo_checkpoint.load_policy` (actor-only load) for fast rollout.
+  #
+  # Modes:
+  # - skip      : do nothing
+  # - if_missing: write only if JSON is missing
+  # - replace   : always overwrite (useful if JSON came from another device/Brax version)
+  ppo_network_config_json:
+    # mode: skip
+    mode: if_missing
+    # mode: replace
+
+  # When `job_name` is a list, keep going even if one job fails.
+  continue_on_error: true
 
   # Input signature for exported TFLite model.
   # - "vector": input tensor shape (obs_dim,)

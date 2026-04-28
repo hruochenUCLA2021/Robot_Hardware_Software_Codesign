@@ -33,6 +33,7 @@ import wandb
 import yaml
 
 from brax.training.agents.ppo import networks as ppo_networks
+from brax.training.agents.ppo import checkpoint as ppo_checkpoint
 from brax.training.agents.ppo import train as ppo
 
 from mujoco_playground import wrapper
@@ -95,8 +96,20 @@ def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
   return progress_fn
 
 
-def create_policy_params_fn(ckpt_path: epath.Path):
-  """Create checkpoint saving function for intermediate policies."""
+def create_policy_params_fn(
+    ckpt_path: epath.Path,
+    *,
+    observation_size=None,
+    action_size: int | None = None,
+    normalize_observations: bool = True,
+    network_factory=None,
+    save_network_config: bool = True,
+):
+  """Create checkpoint saving function for intermediate policies.
+
+  In addition to Orbax weights, this can also write `ppo_network_config.json`
+  next to each checkpoint, so rollouts can use `ppo_checkpoint.load_policy`.
+  """
 
   def policy_params_fn(current_step, make_policy, params):
     del make_policy  # Unused.
@@ -104,6 +117,19 @@ def create_policy_params_fn(ckpt_path: epath.Path):
     save_args = orbax_utils.save_args_from_target(params)
     path = ckpt_path / f"{current_step}"
     orbax_checkpointer.save(path, params, force=True, save_args=save_args)
+    if save_network_config and (network_factory is not None) and (action_size is not None) and (observation_size is not None):
+      try:
+        cfg_json = ppo_checkpoint.network_config(
+            observation_size=observation_size,
+            action_size=int(action_size),
+            normalize_observations=bool(normalize_observations),
+            network_factory=network_factory,
+        )
+        (path / "ppo_network_config.json").write_text(
+            cfg_json.to_json_best_effort(), encoding="utf-8"
+        )
+      except Exception:
+        pass
 
   return policy_params_fn
 
@@ -248,7 +274,6 @@ def train_stage(
       env_name + f"_{stage_name}", num_timesteps, start_time, wandb_run
   )
   randomizer = hi_randomize.domain_randomize
-  policy_params_fn = create_policy_params_fn(ckpt_path)
 
   # Network factory handling.
   ppo_training_params = dict(ppo_params)
@@ -258,6 +283,15 @@ def train_stage(
         ppo_networks.make_ppo_networks, **ppo_params.network_factory
     )
     del ppo_training_params["network_factory"]
+  normalize_observations = bool(ppo_params.get("normalize_observations", True))
+  policy_params_fn = create_policy_params_fn(
+      ckpt_path,
+      observation_size=env.observation_size,
+      action_size=int(env.action_size),
+      normalize_observations=normalize_observations,
+      network_factory=network_factory,
+      save_network_config=True,
+  )
 
   print(f"restore_checkpoint_path for stage '{stage_name}': {restore_checkpoint_path}")
 
@@ -286,6 +320,18 @@ def train_stage(
   orbax_checkpointer = ocp.PyTreeCheckpointer()
   save_args = orbax_utils.save_args_from_target(params)
   orbax_checkpointer.save(final_ckpt_dir, params, force=True, save_args=save_args)
+  try:
+    cfg_json = ppo_checkpoint.network_config(
+        observation_size=env.observation_size,
+        action_size=int(env.action_size),
+        normalize_observations=normalize_observations,
+        network_factory=network_factory,
+    )
+    (final_ckpt_dir / "ppo_network_config.json").write_text(
+        cfg_json.to_json_best_effort(), encoding="utf-8"
+    )
+  except Exception:
+    pass
 
   print(f"Final policy for stage '{stage_name}' saved to: {final_ckpt_dir}")
   # Finish W&B run for this stage.

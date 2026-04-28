@@ -22,13 +22,56 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   --ros-args \
   -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat/final \
   -p home_keyframe_name:=home_straight
+
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat_curriculum_v1_home_straight_v1/final \
+  -p policy_format:=brax \
+  -p home_keyframe_name:=home_straight
+
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p render:=true \
+  -p home_keyframe_name:=home_straight
+
+
+pip install ai-edge-litert
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight
+```
+
+If the TFLite mode hangs when importing TensorFlow, install LiteRT (recommended, supports Python 3.12):
+
+```bash
+pip install ai-edge-litert
+```
+
+If you see `ModuleNotFoundError: No module named 'CodesignEnv'`, make sure you
+run from inside the repo (so the node can find `Robot_Hardware_Software_Codesign/`
+via `cwd`), for example:
+
+```bash
+cd /ABS/PATH/TO/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/simulation/ros2
 ```
 
 ### Useful parameters
 
 - `env_name` (str): registry env name
 - `task` (str): task name, e.g. `flat_terrain_alternative_imu_fv2_torque`
-- `checkpoint_dir` (str): path to the Brax checkpoint folder (**required**)
+- `checkpoint_dir` (str): path to a **Brax checkpoint folder** or a **.tflite** file (**required**)
+- `policy_format` (str): `auto|brax|tflite` (default `auto`)
+- `tflite_num_threads` (int): TF Lite CPU threads (default 1)
+- `tflite_backend` (str): `auto|litert|tflite_runtime|tensorflow` (default `auto`)
 - `home_keyframe_name` (str): keyframe name in the scene XML
 - `render` (bool): open interactive viewer
 - `control_hz` (float): default 50 Hz

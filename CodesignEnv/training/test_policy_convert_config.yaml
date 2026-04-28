@@ -1,0 +1,77 @@
+## Compare Brax checkpoint policy vs exported TFLite policy.
+##
+## Usage:
+##   python test_policy_convert.py
+##   python test_policy_convert.py test_policy_convert_config.yaml
+##
+## job_name can be:
+## - a single string
+## - a list of strings
+## - "all"
+
+job_name: all
+
+jobs:
+  phonebot_flat_ok_v6:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat_ok_v6
+    env_name: PhonebotJoystickFlatTerrain
+    env_config_path: null
+    tflite_model: exported_tflite/phonebot_flat_ok_v6_actor.tflite
+
+  phonebot_flat_alter_v2:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlter_flat_v2
+    env_name: PhonebotJoystickFlatTerrainAlter
+    env_config_path: null
+    tflite_model: exported_tflite/phonebot_flat_alter_v2_actor.tflite
+
+  phonebot_flat_alter_fv2:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2_flat
+    env_name: PhonebotJoystickFlatTerrainAlterFV2
+    env_config_path: null
+    tflite_model: exported_tflite/phonebot_flat_alter_fv2_actor.tflite
+
+  phonebot_flat_alter_fv2_torque_awared_home_straight_v1:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat_curriculum_v1_home_straight_v1
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    env_config_path: null
+    tflite_model: exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+
+  phonebot_rough_alter_fv2_torque_awared_home_straight_v1:
+    checkpoint_dir: checkpoints/PhonebotJoystickRoughTerrainAlterFV2TorqueAwared_rough_curriculum_v1_home_straight_v1
+    env_name: PhonebotJoystickRoughTerrainAlterFV2TorqueAwared
+    env_config_path: null
+    tflite_model: exported_tflite/phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+
+  chopstickbot_flat_alter_torque_awared_curriculum_v1_v1:
+    checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrainAlterTorqueAwared_flat_curriculum_v1_v1
+    env_name: ChopstickbotJoystickFlatTerrainAlterTorqueAwared
+    env_config_path: null
+    tflite_model: exported_tflite/chopstickbot_flat_alter_torque_awared_curriculum_v1_v1_actor.tflite
+
+  chopstickbot_rough_alter_torque_awared_curriculum_v1_v1:
+    checkpoint_dir: checkpoints/ChopstickbotJoystickRoughTerrainAlterTorqueAwared_rough_curriculum_v1_v1
+    env_name: ChopstickbotJoystickRoughTerrainAlterTorqueAwared
+    env_config_path: null
+    tflite_model: exported_tflite/chopstickbot_rough_alter_torque_awared_curriculum_v1_v1_actor.tflite
+
+test:
+  # Number of observation vectors to test per job.
+  # num_samples: 100
+  num_samples: 20
+  seed: 0
+
+  # How to sample obs['state'] vectors:
+  # - env_reset: use env.reset() (more realistic, default)
+  # - normal   : iid N(0,1) vectors
+  # - uniform  : iid U(-1,1) vectors
+  obs_source: env_reset
+
+  # Brax inference mode
+  deterministic: true
+
+  # Print the first K sample actions (0 = none).
+  print_examples: 0
+
+  # Keep going if one job fails.
+  continue_on_error: true
+
