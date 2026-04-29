@@ -9,6 +9,7 @@ from .configs import chopstick_joystick
 from .configs import chopstick_joystick_torque_awared
 from .configs import phonebot_joystick
 from .configs import phonebot_joystick_torque_awared
+from .configs import phonebot_joystick_torque_awared_ankle_collision
 
 
 ENVIRONMENTS = [
@@ -26,6 +27,8 @@ ENVIRONMENTS = [
     "PhonebotJoystickRoughTerrainAlterFV2",
     "PhonebotJoystickFlatTerrainAlterFV2TorqueAwared",
     "PhonebotJoystickRoughTerrainAlterFV2TorqueAwared",
+    "PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision",
+    "PhonebotJoystickRoughTerrainAlterFV2TorqueAwaredAnkleCollision",
 ]
 
 
@@ -59,6 +62,10 @@ def get_environment(name: str):
         return phonebot_joystick_torque_awared.Joystick, phonebot_joystick_torque_awared.default_config
     if name == "PhonebotJoystickRoughTerrainAlterFV2TorqueAwared":
         return phonebot_joystick_torque_awared.Joystick, phonebot_joystick_torque_awared.default_config
+    if name == "PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision":
+        return phonebot_joystick_torque_awared_ankle_collision.Joystick, phonebot_joystick_torque_awared_ankle_collision.default_config
+    if name == "PhonebotJoystickRoughTerrainAlterFV2TorqueAwaredAnkleCollision":
+        return phonebot_joystick_torque_awared_ankle_collision.Joystick, phonebot_joystick_torque_awared_ankle_collision.default_config
 
     raise ValueError(f"Unknown environment: {name}. Available: {ENVIRONMENTS}")
 
