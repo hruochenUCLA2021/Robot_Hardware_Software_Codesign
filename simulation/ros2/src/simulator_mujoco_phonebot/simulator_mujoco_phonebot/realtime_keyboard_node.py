@@ -148,12 +148,12 @@ class KeyboardTeleop:
         left = kb.Key.left in pressed
         right = kb.Key.right in pressed
 
-        a = any(getattr(k, "char", None) == "a" for k in pressed)
-        d = any(getattr(k, "char", None) == "d" for k in pressed)
+        k1 = any(getattr(k, "char", None) == "1" for k in pressed)
+        k3 = any(getattr(k, "char", None) == "3" for k in pressed)
 
         vx = (float(up) - float(down)) * s * self._max_vx
         vy = (float(left) - float(right)) * s * self._max_vy
-        wz = (float(a) - float(d)) * s * self._max_wz
+        wz = (float(k1) - float(k3)) * s * self._max_wz
         return TeleopCommand(vx=vx, vy=vy, wz=wz)
 
     def stop(self) -> None:
@@ -306,7 +306,7 @@ class PhonebotRealtimeMujocoNode(Node):
         )
         self._teleop.start()
         self.get_logger().info(
-            "Controls: arrows=vx/vy, a/d=yaw, Shift=fast, Ctrl=slow, "
+            "Controls: arrows=vx/vy, 1/3=yaw, Shift=fast, Ctrl=slow, "
             "Space=stop, Esc=quit."
         )
 

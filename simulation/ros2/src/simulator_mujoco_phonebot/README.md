@@ -6,7 +6,7 @@ CodesignEnv joystick policy** and controlled by the keyboard.
 ### Controls
 
 - Arrow keys: command \(v_x, v_y\)
-- `a` / `d`: command yaw rate \(w_z\)
+- `1` / `3`: command yaw rate \(w_z\)
 - Hold **Shift**: fast (full range)
 - Hold **Ctrl**: slow (quarter range)
 - No modifier: normal (half range)
