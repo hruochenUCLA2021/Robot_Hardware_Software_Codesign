@@ -1,86 +1,359 @@
-# alter means the imu frame is on the torso, not the base_motor_link
+## General Phonebot rollout (MuJoCo CPU) recording videos.
+##
+## Run:
+##   python load_and_rollout_phonebot_joystick_general.py
+##   python load_and_rollout_phonebot_joystick_general.py rollout_phonebot_joystick_general_config.yaml
+##
+## `job_name` can be: string | list[string] | "all"
 
+# Default behavior (can be overridden per-job / per-rollout):
+# - show_contact: draw MuJoCo contact points/forces in rendered MP4s
+# - record_json: save qpos/qvel/qacc/actuator_force JSON next to the videos
+# - auto_plot:   generate matplotlib plots from that JSON (uses `data_plotter.py`)
+# record_json: true
+# auto_plot: true
 
-
-checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat/final
-env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
-output_dir: video_rollout_phonebot_alter_fv2_torque_awared_ankle_collision_flat
-
-# checkpoint_dir: checkpoints/PhonebotJoystickRoughTerrainAlterFV2TorqueAwaredAnkleCollision_rough/final
-# env_name: PhonebotJoystickRoughTerrainAlterFV2TorqueAwaredAnkleCollision
-# output_dir: video_rollout_phonebot_alter_fv2_torque_awared_ankle_collision_rough
-
-
-## If true, map PhonebotJoystick*Alter -> PhonebotJoystick*AlterFV2 automatically
-## (so you can keep older configs and just flip this flag).
-use_alternative_imu_fv2: false
-
-## Which keyframe to use for initialization (scene keyframes).
-# home_keyframe_name: home_straight
-home_keyframe_name: home
-
-
-# checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrain_flat/final
-# env_name: PhonebotJoystickFlatTerrain
-# output_dir: video_rollout_phonebot
-
-
-
-# Global toggle: whether to visualize contact points/forces in rendered videos.
-# Can be overridden per rollout below.
 show_contact: true
-# show_contact: false
+record_json: false
+auto_plot: false
+plot:
+  figsize_per_subplot: [12, 2.5]
+  dpi: 150
 
-# Optional: path to a YAML env_config (e.g. a saved `env_config.yaml` from a
-# training run). If null, the default joystick env config is used.
-env_config_path: null
 
-# Automatically plot qpos/qvel curves from recorded JSON after rollout.
-auto_plot: true
+# xml_path takes priority for the MuJoCo rollout. 
+# If you set xml_path, the script will always load that XML and will not use env_name/task to pick a different scene.
 
-# Global defaults (can be overridden per rollout)
-max_steps: 1000
-render_every: 1
-anim_skip: 10
+# Does env_name + task still “take effect” if xml_path is specified?
+# Yes, but only for other purposes, not for choosing the XML:
 
-rollouts:
-  # Forward walking
-  - name: flat_forward_track
-    out: phonebot_flat_forward_track.mp4
-    command: [1.0, 0.0, 0.0]
-    start_pose: [0.0, 0.0, 0.0]
-    camera: track
+# Brax policy loading fallback: 
+#     - if ppo_checkpoint.load_policy can't be used, it calls _load_brax_policy(...), which uses env_name/task to build an MJX env and restore the checkpoint.
+# Torque controller reuse + action_scale: 
+#     - if env_name and task are provided, it builds env_for_controller:
 
-  - name: flat_forward_fixed
-    out: phonebot_flat_forward_fixed.mp4
-    command: [1.0, 0.0, 0.0]
-    start_pose: [0.0, 0.0, 0.0]
-    camera: null
 
-  # Sideways walking
-  - name: flat_side_track
-    out: phonebot_flat_side_track.mp4
-    command: [0.0, 0.5, 0.0]
-    start_pose: [0.0, 0.0, 0.0]
-    camera: track
+# job_name: phonebot_flat_fv2_torque_ankle_brax
+# job_name: phonebot_flat_fv2_torque_brax_curriculum_v1_home_straight
+# job_name: phonebot_flat_fv2_torque_tflite_home_straight
+# job_name: phonebot_flat_fv2_torque_tflite_home_straight_on_rough_terrain
+# job_name: phonebot_rough_fv2_torque_tflite_home_straight_on_rough_terrain
+# job_name: phonebot_rough_fv2_torque_tflite_home_straight_on_flat_terrain
+job_name: phonebot_flat_fv2_torque_tflite_home_straight_on_full_collision
+# job_name: phonebot_rough_fv2_torque_tflite_home_straight_on_flat_terrain_on_full_collision
 
-  - name: flat_side_fixed
-    out: phonebot_flat_side_fixed.mp4
-    command: [0.0, 0.5, 0.0]
-    start_pose: [0.0, 0.0, 0.0]
-    camera: null
 
-  # Turn in place
-  - name: flat_turn_track
-    out: phonebot_flat_turn_track.mp4
-    command: [0.0, 0.0, 1.5]
-    start_pose: [0.0, 0.0, 0.0]
-    camera: track
+jobs:
+  phonebot_flat_fv2_torque_ankle_brax:
+    policy_format: brax     # brax|tflite|auto
+    policy_path: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat
 
-  - name: flat_turn_fixed
-    out: phonebot_flat_turn_fixed.mp4
-    command: [0.0, 0.0, 1.5]
-    start_pose: [0.0, 0.0, 0.0]
-    camera: null
+    # Explicit scene XML
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
 
+    # Used only for Brax fallback restore + torque controller reuse
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    task: flat_terrain_alternative_imu_fv2_torque_ankle_collision
+    env_config_path: null
+
+    home_keyframe_name: home
+    start_pose_default: [0.0, 0.0, 0.0]   # x, y, yaw
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+
+    # Action scaling (if null: tries to read from env config; else uses 1.0)
+    action_scale: null
+
+    output_dir: video_rollout_phonebot_general
+
+    rollouts:
+      - name: forward_track
+        out: forward_track.mp4
+        command: [1.0, 0.0, 0.0]
+        start_pose: [0.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+      - name: side_track
+        out: side_track.mp4
+        command: [0.0, 0.5, 0.0]
+        camera: track
+
+      - name: turn_track
+        out: turn_track.mp4
+        command: [0.0, 0.0, 1.5]
+        camera: track
+
+  phonebot_flat_fv2_torque_ankle_tflite:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert    # litert|tensorflow
+    tflite_num_threads: 1
+
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    task: flat_terrain_alternative_imu_fv2_torque_ankle_collision
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: null
+
+    output_dir: video_rollout_phonebot_general
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite.mp4
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+  # ---------------------------------------------------------------------------
+  # PhonebotJoystickFlatTerrainAlterFV2TorqueAwared (non-ankle-collision)
+  # ---------------------------------------------------------------------------
+
+  phonebot_flat_fv2_torque_brax_curriculum_v1_home_straight:
+    policy_format: brax
+    policy_path: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat_curriculum_v1_home_straight_v1
+
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: null
+
+    output_dir: video_rollout_phonebot_general
+
+    rollouts:
+      - name: forward_track
+        out: forward_track_curriculum_v1_home_straight.mp4
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+      - name: turn_track
+        out: turn_track_curriculum_v1_home_straight.mp4
+        command: [0.0, 0.0, 1.5]
+        camera: track
+        max_steps: 1000
+
+  phonebot_flat_fv2_torque_tflite_home_straight:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert
+    tflite_num_threads: 1
+
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: null
+
+    output_dir: video_rollout_phonebot_general
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite_home_straight.mp4
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+
+  phonebot_flat_fv2_torque_tflite_home_straight_on_full_collision:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert
+    tflite_num_threads: 1
+
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: 1
+    # action_scale: null
+
+    output_dir: video_rollout_phonebot_general_phonebot_flat_fv2_torque_tflite_home_straight_on_full_collision
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite_home_straight.mp4
+        command: [1.0, 0.0, 0.0]
+        # command: [0.5, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+
+  phonebot_flat_fv2_torque_tflite_home_straight_on_rough_terrain:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert
+    tflite_num_threads: 1
+
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_rough_terrain_alter_v2.xml
+    # xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: null
+
+    output_dir: video_rollout_phonebot_general
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite_home_straight.mp4
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+  phonebot_rough_fv2_torque_tflite_home_straight_on_rough_terrain:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert
+    tflite_num_threads: 1
+
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_rough_terrain_alter_v2.xml
+    # xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: 1
+    # action_scale: null
+
+    output_dir: video_rollout_phonebot_general_phonebot_rough_fv2_torque_tflite_home_straight_on_rough_terrain
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite_home_straight.mp4
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+
+  phonebot_rough_fv2_torque_tflite_home_straight_on_flat_terrain:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert
+    tflite_num_threads: 1
+
+    # xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_rough_terrain_alter_v2.xml
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: 1
+    # action_scale: null
+
+    output_dir: video_rollout_phonebot_general_phonebot_rough_fv2_torque_tflite_home_straight_on_flat_terrain
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite_home_straight.mp4
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+
+  phonebot_rough_fv2_torque_tflite_home_straight_on_flat_terrain_on_full_collision:
+    policy_format: tflite
+    policy_path: exported_tflite/phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite
+    tflite_backend: litert
+    tflite_num_threads: 1
+
+    # xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_rough_terrain_alter_v2.xml
+    xml_path: models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
+
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwared
+    task: flat_terrain_alternative_imu_fv2_torque
+    env_config_path: null
+
+    home_keyframe_name: home_straight
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: 1
+    # action_scale: null
+
+    output_dir: video_rollout_phonebot_general_phonebot_rough_fv2_torque_tflite_home_straight_on_flat_terrain_on_full_collision
+
+    rollouts:
+      - name: forward_track_tflite
+        out: forward_track_tflite_home_straight.mp4
+        # command: [0.5, 0.0, 0.0]
+        command: [1.0, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
 

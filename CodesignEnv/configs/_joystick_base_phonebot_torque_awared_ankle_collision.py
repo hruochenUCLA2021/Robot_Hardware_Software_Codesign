@@ -196,6 +196,10 @@ class BaseJoystick(hi_base.HiEnv):
     self._right_foot_geom_id = self._mj_model.geom("right_foot").id
     self._left_ankle_geom_id = self._mj_model.geom("l_ankle_pitch_collision").id
     self._right_ankle_geom_id = self._mj_model.geom("r_ankle_pitch_collision").id
+    self._left_knee_geom_id = self._mj_model.geom("l_knee_pitch_collision_box").id
+    self._right_knee_geom_id = self._mj_model.geom("r_knee_pitch_collision_box").id
+    self._left_hip_roll_geom_id = self._mj_model.geom("l_hip_roll_collision_box").id
+    self._right_hip_roll_geom_id = self._mj_model.geom("r_hip_roll_collision_box").id
     self._left_feet_geom_id = [self._left_foot_geom_id]
     self._right_feet_geom_id = [self._right_foot_geom_id]
     self._feet_site_id = np.array([
@@ -671,12 +675,18 @@ class BaseJoystick(hi_base.HiEnv):
     )
 
   def _cost_body_collision(self, data: mjx.Data) -> jax.Array:
-    # Penalize foot ↔ ankle collisions (left/right cross terms included).
-    lfa = geoms_colliding(data, self._left_foot_geom_id, self._left_ankle_geom_id)
-    lra = geoms_colliding(data, self._left_foot_geom_id, self._right_ankle_geom_id)
-    rla = geoms_colliding(data, self._right_foot_geom_id, self._left_ankle_geom_id)
-    rra = geoms_colliding(data, self._right_foot_geom_id, self._right_ankle_geom_id)
-    return jp.asarray(jp.any(jp.array([lfa, lra, rla, rra])), dtype=jp.float32)
+    # Penalize foot ↔ (ankle/knee/hip-roll) collisions (left/right cross terms included).
+    lf = self._left_foot_geom_id
+    rf = self._right_foot_geom_id
+    ankles = [self._left_ankle_geom_id, self._right_ankle_geom_id]
+    knees = [self._left_knee_geom_id, self._right_knee_geom_id]
+    hips = [self._left_hip_roll_geom_id, self._right_hip_roll_geom_id]
+
+    pairs = []
+    for gid in ankles + knees + hips:
+      pairs.append(geoms_colliding(data, lf, gid))
+      pairs.append(geoms_colliding(data, rf, gid))
+    return jp.asarray(jp.any(jp.array(pairs)), dtype=jp.float32)
 
   def _get_reward(
       self,

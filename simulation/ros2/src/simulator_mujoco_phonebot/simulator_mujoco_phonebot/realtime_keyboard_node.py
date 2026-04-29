@@ -171,6 +171,38 @@ class KeyboardTeleop:
 class PhonebotRealtimeMujocoNode(Node):
     """Run MuJoCo CPU sim and drive a trained joystick policy in real time."""
 
+    def _resolve_xml_path(self, xml_path: str) -> str:
+        """Resolve an XML path from ROS params.
+
+        - Absolute paths are used as-is.
+        - Relative paths are resolved relative to the repo root
+          (`Robot_Hardware_Software_Codesign/`).
+        - As a convenience, we also try resolving relative to the workspace root
+          (parent of `Robot_Hardware_Software_Codesign/`) and the current CWD.
+        """
+        p = Path(str(xml_path)).expanduser()
+        if p.is_absolute():
+            return str(p.resolve())
+
+        # Find the Robot_Hardware_Software_Codesign/ root via CodesignEnv package.
+        try:
+            import CodesignEnv as _codesignenv  # type: ignore
+
+            rhsc_root = Path(_codesignenv.__file__).resolve().parent.parent
+        except Exception:
+            rhsc_root = Path.cwd()
+
+        candidates = [
+            (rhsc_root / p).resolve(),
+            (rhsc_root.parent / p).resolve(),
+            (Path.cwd() / p).resolve(),
+        ]
+        for c in candidates:
+            if c.exists():
+                return str(c)
+        # If nothing exists yet, return the primary resolved path for a clear error.
+        return str(candidates[0])
+
     def __init__(self) -> None:
         super().__init__("phonebot_realtime_mujoco")
 
@@ -193,12 +225,16 @@ class PhonebotRealtimeMujocoNode(Node):
             "env_name", "PhonebotJoystickFlatTerrainAlterFV2TorqueAwared"
         )
         self.declare_parameter("task", "flat_terrain_alternative_imu_fv2_torque")
+        # Optional override: load this scene XML directly in MuJoCo CPU.
+        # If empty, use the MJX env's xml_path for the selected env_name/task.
+        self.declare_parameter("xml_path", "")
         self.declare_parameter("checkpoint_dir", "")
         self.declare_parameter("policy_format", "auto")  # auto|brax|tflite
         self.declare_parameter("tflite_num_threads", 1)
         self.declare_parameter("tflite_backend", "auto")  # auto|litert|tflite_runtime|tensorflow
         self.declare_parameter("home_keyframe_name", "home")
         self.declare_parameter("render", True)
+        self.declare_parameter("show_contact", False)
         self.declare_parameter("control_hz", 50.0)
         self.declare_parameter("sim_hz", 500.0)
         self.declare_parameter("action_scale", 1.0)
@@ -211,10 +247,12 @@ class PhonebotRealtimeMujocoNode(Node):
 
         env_name = str(self.get_parameter("env_name").value)
         task = str(self.get_parameter("task").value)
+        xml_path_override = str(self.get_parameter("xml_path").value).strip()
         ckpt_dir = str(self.get_parameter("checkpoint_dir").value)
         policy_format = str(self.get_parameter("policy_format").value).lower().strip()
         home_keyframe_name = str(self.get_parameter("home_keyframe_name").value)
         render = bool(self.get_parameter("render").value)
+        show_contact = bool(self.get_parameter("show_contact").value)
 
         if not ckpt_dir:
             raise ValueError("ROS param `checkpoint_dir` is required.")
@@ -227,9 +265,12 @@ class PhonebotRealtimeMujocoNode(Node):
 
         self.get_logger().info(f"env_name: {env_name}")
         self.get_logger().info(f"task: {task}")
+        if xml_path_override:
+            self.get_logger().info(f"xml_path override: {xml_path_override}")
         self.get_logger().info(f"checkpoint_dir: {ckpt_dir}")
         self.get_logger().info(f"policy_format: {policy_format}")
         self.get_logger().info(f"home_keyframe_name: {home_keyframe_name}")
+        self.get_logger().info(f"show_contact: {show_contact}")
         self.get_logger().info(
             f"control_hz={control_hz:.1f} sim_hz={sim_hz:.1f} "
             f"substeps={self._n_substeps}"
@@ -260,8 +301,14 @@ class PhonebotRealtimeMujocoNode(Node):
                 pass
 
         self._mjx_env = env_cls(task=task, config=env_cfg)
-        xml_path = self._mjx_env.xml_path
-        self.get_logger().info(f"Using XML: {xml_path}")
+        xml_path_env = str(self._mjx_env.xml_path)
+        xml_path = xml_path_env
+        if xml_path_override:
+            xml_path = self._resolve_xml_path(xml_path_override)
+            self.get_logger().info(f"Using XML (override): {xml_path}")
+            self.get_logger().info(f"MJX env xml_path (for restore/controller): {xml_path_env}")
+        else:
+            self.get_logger().info(f"Using XML: {xml_path_env}")
 
         self._policy_backend = "brax"
         self._policy = None
@@ -315,6 +362,17 @@ class PhonebotRealtimeMujocoNode(Node):
             self._viewer = self._viewer_mod.launch_passive(
                 self._mj_model, self._mj_data
             )
+            try:
+                with self._viewer.lock():
+                    self._viewer.opt.flags[
+                        self._mujoco.mjtVisFlag.mjVIS_CONTACTPOINT
+                    ] = bool(show_contact)
+                    self._viewer.opt.flags[
+                        self._mujoco.mjtVisFlag.mjVIS_CONTACTFORCE
+                    ] = bool(show_contact)
+            except Exception:
+                # Viewer API can differ across mujoco versions; ignore if unsupported.
+                pass
 
         # Load policy after viewer initialization (helps avoid some native-lib
         # initialization conflicts on certain systems when using TensorFlow).

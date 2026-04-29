@@ -63,17 +63,6 @@
           <inertial pos="8.30740041594946E-06 -0.0539730760978963 -0.0289917248021264" quat="1 0 0 0" mass="0.0577821503558218"
                    diaginertia="1.85527228913837e-05 1.6254327826533e-05 9.78707268328593e-06" />
           <!-- <geom name="l_hip_roll_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Hip_Roll_Link.STL" class="collision" /> -->
-          <!-- Hip-roll collision proxy (box):
-               - should collide with feet (for self-collision penalty),
-               - should NOT collide with floor (only feet contact floor). -->
-          <geom name="l_hip_roll_collision_box"
-                type="box"
-                size="0.017 0.04 0.03"
-                pos="0 -0.04 -0.027"
-                quat="1 0 0 0"
-                class="collision"
-                rgba="0.0 0.0 1.0 1.0"
-                contype="2" conaffinity="2" />
           <geom name="l_hip_roll_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Hip_Roll_Link.STL" class="visual" />
 
           <body name="l_hip_thigh" pos="0 -0.07925 -0.019" quat="0.4999981633974483 0.49999999999662686 -0.49999999999662686 0.5000018366025516">
@@ -88,17 +77,6 @@
               <inertial pos="0.000851922444856955 0.0302265598825809 -0.0188367597643943" quat="1 0 0 0" mass="0.0859142330719075"
                        diaginertia="3.92786008778373e-05 2.10807528817828e-05 3.03814272871544e-05" />
               <!-- <geom name="l_hip_calf_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Knee_Pitch_Link.STL" class="collision" /> -->
-              <!-- Knee-pitch collision proxy (box):
-                   - should collide with feet (for self-collision penalty),
-                   - should NOT collide with floor (only feet contact floor). -->
-              <geom name="l_knee_pitch_collision_box"
-                    type="box"
-                    size="0.015 0.0575 0.021"
-                    pos="0 0.0575 -0.021"
-                    quat="1 0 0 0"
-                    class="collision"
-                    rgba="0.0 0.0 1.0 1.0"
-                    contype="2" conaffinity="2" />
               <geom name="l_hip_calf_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Knee_Pitch_Link.STL" class="visual" />
 
               <body name="l_ankle_pitch" pos="0 0.1065 -0.0382" quat="-3.673205103346574e-06 0.9999999999932537 0.0 -0.0">
@@ -122,8 +100,7 @@
                   <joint name="l_ankle_roll_joint" type="hinge" ref="0.0" class="motor" range="-1.571 1.571" axis="0 0 1" />
                   <inertial pos="2.26157387261949E-09 -0.0302538242168855 0.0224329681837724" quat="1 0 0 0" mass="0.199941915686484"
                            diaginertia="0.000160746415074451 0.000207710045474122 5.92078764405586e-05" />
-                  <geom name="left_foot" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Ankle_Roll_Link.STL" class="collision"
-                        contype="1" conaffinity="3" rgba="0.0 0.0 1.0 1.0"/>
+                  <geom name="l_ankle_roll_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Ankle_Roll_Link.STL" class="collision" />
                   <geom name="l_ankle_roll_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="L_Ankle_Roll_Link.STL" class="visual" />
 
                   <body name="l_end_effector" pos="0.000000 -0.0315000 0.0225000" quat="-0.500000 0.500000 -0.500000 -0.500000">
@@ -150,17 +127,6 @@
           <inertial pos="-8.30740041608824E-06 0.0539730760978963 -0.0289917248021264" quat="1 0 0 0" mass="0.0577821503558218"
                    diaginertia="1.85527228913837e-05 1.6254327826533e-05 9.78707268328592e-06" />
           <!-- <geom name="r_hip_roll_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Hip_Roll_Link.STL" class="collision" /> -->
-          <!-- Hip-roll collision proxy (box):
-               - should collide with feet (for self-collision penalty),
-               - should NOT collide with floor (only feet contact floor). -->
-          <geom name="r_hip_roll_collision_box"
-                type="box"
-                size="0.017 0.04 0.03"
-                pos="0 0.04 -0.027"
-                quat="1 0 0 0"
-                class="collision"
-                rgba="0.0 0.0 1.0 1.0"
-                contype="2" conaffinity="2" />
           <geom name="r_hip_roll_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Hip_Roll_Link.STL" class="visual" />
 
           <body name="r_hip_thigh" pos="0 0.07925 -0.019" quat="-0.5000036731949838 0.4999981633907021 0.5000018365958054 0.4999963267847773">
@@ -175,17 +141,6 @@
               <inertial pos="0.000863111334580446 -0.030226559882581 -0.018639658989542" quat="1 0 0 0" mass="0.0859142330719075"
                        diaginertia="3.92786008778374e-05 2.10807528817828e-05 3.03814272871544e-05" />
               <!-- <geom name="r_hip_calf_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Knee_Pitch_Link.STL" class="collision" /> -->
-              <!-- Knee-pitch collision proxy (box):
-                   - should collide with feet (for self-collision penalty),
-                   - should NOT collide with floor (only feet contact floor). -->
-              <geom name="r_knee_pitch_collision_box"
-                    type="box"
-                    size="0.015 0.0575 0.021"
-                    pos="0 -0.0575 -0.021"
-                    quat="1 0 0 0"
-                    class="collision"
-                    rgba="0.0 0.0 1.0 1.0"
-                    contype="2" conaffinity="2" />
               <geom name="r_hip_calf_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Knee_Pitch_Link.STL" class="visual" />
 
               <body name="r_ankle_pitch" pos="0 -0.1065 -0.0378" quat="-3.673205103346574e-06 0.9999999999932537 0.0 -0.0">
@@ -206,8 +161,7 @@
                   <joint name="r_ankle_roll_joint" type="hinge" ref="0.0" class="motor" range="-1.571 1.571" axis="0 0 1" />
                   <inertial pos="2.26157140237326E-09 -0.0302538242168844 0.0224329681837727" quat="1 0 0 0" mass="0.199941915686484"
                            diaginertia="0.000160746415074451 0.000207710045474122 5.92078764405586e-05" />
-                  <geom name="right_foot" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Ankle_Roll_Link.STL" class="collision"
-                        contype="1" conaffinity="3" rgba="0.0 0.0 1.0 1.0"/>
+                  <geom name="r_ankle_roll_collision" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Ankle_Roll_Link.STL" class="collision" />
                   <geom name="r_ankle_roll_visual" pos="0 0 0" quat="1 0 0 0" type="mesh" mesh="R_Ankle_Roll_Link.STL" class="visual" />
 
                   <body name="r_end_effector" pos="-0.000000 -0.0315000 0.0225000" quat="-0.500000 0.500000 0.500000 0.500000">

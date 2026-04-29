@@ -39,6 +39,22 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p render:=true \
   -p home_keyframe_name:=home_straight
 
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p show_contact:=true \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
 
 pip install ai-edge-litert
 
@@ -68,12 +84,14 @@ cd /ABS/PATH/TO/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign
 
 - `env_name` (str): registry env name
 - `task` (str): task name, e.g. `flat_terrain_alternative_imu_fv2_torque`
+- `xml_path` (str): optional scene XML override (absolute or relative to `Robot_Hardware_Software_Codesign/`).
 - `checkpoint_dir` (str): path to a **Brax checkpoint folder** or a **.tflite** file (**required**)
 - `policy_format` (str): `auto|brax|tflite` (default `auto`)
 - `tflite_num_threads` (int): TF Lite CPU threads (default 1)
 - `tflite_backend` (str): `auto|litert|tflite_runtime|tensorflow` (default `auto`)
 - `home_keyframe_name` (str): keyframe name in the scene XML
 - `render` (bool): open interactive viewer
+- `show_contact` (bool): show contact points/forces in the viewer
 - `control_hz` (float): default 50 Hz
 - `sim_hz` (float): default 500 Hz (10 substeps at 50 Hz)
 - `max_vx`, `max_vy`, `max_wz` (float): full-speed command limits
