@@ -17,13 +17,14 @@
 # - a list of strings (multiple jobs)
 # - "all" (run every job under `jobs:`)
 job_name:
-  - phonebot_flat_ok_v6
-  - phonebot_flat_alter_v2
-  - phonebot_flat_alter_fv2
-  - phonebot_flat_alter_fv2_torque_awared_home_straight_v1
-  - phonebot_rough_alter_fv2_torque_awared_home_straight_v1
-  - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
-  - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
+  # - phonebot_flat_ok_v6
+  # - phonebot_flat_alter_v2
+  # - phonebot_flat_alter_fv2
+  # - phonebot_flat_alter_fv2_torque_awared_home_straight_v1
+  # - phonebot_rough_alter_fv2_torque_awared_home_straight_v1
+  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680
+  # - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
+  # - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
 
 jobs:
   phonebot_flat_ok_v6:
@@ -65,6 +66,14 @@ jobs:
     out_dir: exported_tflite
     out_tflite: phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite
     out_metadata_json: phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor_metadata.json
+
+  phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat/155975680
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680_actor_metadata.json
 
   chopstickbot_flat_alter_torque_awared_curriculum_v1_v1:
     checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrainAlterTorqueAwared_flat_curriculum_v1_v1

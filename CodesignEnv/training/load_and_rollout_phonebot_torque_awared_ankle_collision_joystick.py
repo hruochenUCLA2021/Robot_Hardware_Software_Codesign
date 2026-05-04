@@ -558,7 +558,7 @@ def main():
 
   # Optional config path: python load_and_rollout_Hi.py [config_path]
   cfg_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
-      _THIS_DIR, "rollout_phonebot_joystick_torque_awared_config.yaml"
+      _THIS_DIR, "rollout_phonebot_joystick_torque_awared_ankle_collision_config.yaml"
   )
   print(f"Using rollout config: {cfg_path}")
 

@@ -75,15 +75,40 @@ def _get_ppo_params_for_phonebot_export() -> config_dict.ConfigDict:
 
 
 def _task_from_env_name(env_name: str) -> str:
-  is_alt = "Alter" in env_name
+  """Derive CodesignEnv task string from registry env name.
+
+  This must match the task naming used by `CodesignEnv.configs.hi_constants.phonebot_task_to_xml`
+  (and chopstickbot equivalent), otherwise the env will load the wrong scene XML.
+  """
+  env_name = str(env_name)
+
   if "FlatTerrain" in env_name:
     task = "flat_terrain"
   elif "RoughTerrain" in env_name:
     task = "rough_terrain"
   else:
     raise ValueError(f"Unexpected env_name: {env_name}")
-  if is_alt:
+
+  # IMU variants.
+  if "AlterFV2" in env_name:
+    task = f"{task}_alternative_imu_fv2"
+  elif "Alter" in env_name:
     task = f"{task}_alternative_imu"
+
+  # Torque-aware variants.
+  if "TorqueAwared" in env_name:
+    # Phonebot torque-aware envs in this repo are FV2-based.
+    if "AlterFV2" not in env_name:
+      raise ValueError(
+          "TorqueAwared envs expect AlterFV2 task naming in this repo. "
+          f"Got env_name={env_name!r}"
+      )
+    task = f"{task}_torque"
+
+  # Ankle-collision variant uses separate scene XMLs.
+  if "AnkleCollision" in env_name:
+    task = f"{task}_ankle_collision"
+
   return task
 
 
