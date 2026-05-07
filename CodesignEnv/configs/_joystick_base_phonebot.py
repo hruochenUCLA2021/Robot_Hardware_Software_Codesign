@@ -61,6 +61,8 @@ def default_config() -> config_dict.ConfigDict:
               # torques=0.0,
               # torques=-0.0001,
               torques=-0.1,
+              # torques_square=-0.01,
+              torques_square=-0.0001,
 
               energy=0.0,
               action_rate=-0.01,
@@ -494,6 +496,9 @@ class BaseJoystick(hi_base.HiEnv):
     n = min(qvel.shape[0], actuator_force.shape[0])
     return jp.sum(jp.abs(qvel[:n] * actuator_force[:n]))
 
+  def _cost_torques_square(self, torques: jax.Array) -> jax.Array:
+    return jp.mean(jp.square(torques))
+
   def _cost_dof_acc(self, qacc: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qacc))
 
@@ -581,6 +586,7 @@ class BaseJoystick(hi_base.HiEnv):
     joint_qacc = getattr(data, "qacc", None)
     joint_qacc = jp.zeros_like(joint_qvel) if joint_qacc is None else joint_qacc[6:]
     torques_cost = self._cost_torques(data.actuator_force)
+    torques_sq_cost = self._cost_torques_square(data.actuator_force)
     energy_cost = self._cost_energy(joint_qvel, data.actuator_force)
     dof_acc_cost = self._cost_dof_acc(joint_qacc)
     dof_vel_cost = self._cost_dof_vel(joint_qvel)
@@ -601,6 +607,7 @@ class BaseJoystick(hi_base.HiEnv):
         "ang_vel_xy": jp.sum(jp.square(local_angvel[:2])),
         "orientation": orientation,
         "torques": torques_cost,
+        "torques_square": torques_sq_cost,
         "energy": energy_cost,
         "action_rate": jp.sum(jp.square(action - info["last_act"])),
         "dof_acc": dof_acc_cost,
