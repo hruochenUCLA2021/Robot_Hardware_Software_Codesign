@@ -166,6 +166,7 @@ def main():
       # running PPO in short chunks and restoring from the previous chunk.
       import re
       import tempfile
+      import datetime
 
       model_dirs = sorted([p for p in models_dir.iterdir() if p.is_dir() and p.name.startswith("len_")])
       if not model_dirs:
@@ -180,6 +181,29 @@ def main():
       n_chunks = max(int((num_timesteps + switch_chunk - 1) // switch_chunk), 1)
       ckpt_leaf = restore
       seen_models: set[str] = set()
+      cumulative_steps = 0
+
+      # Create one W&B run for the entire multi-chunk training (if enabled).
+      wandb_run = None
+      if os.environ.get("WANDB_MODE", "").lower() != "disabled":
+        try:
+          import wandb  # local import
+
+          wandb_run = wandb.init(
+              project="ChopstickbotJoystickCurriculum",
+              name=f"{env_name_flat}_flat_uniform_leg_pool_switch_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+              config={
+                  "env_name": str(env_name_flat),
+                  "mode": "flat",
+                  "num_timesteps_total": int(num_timesteps),
+                  "switch_chunk_timesteps": int(switch_chunk),
+                  "n_models": int(len(model_dirs)),
+                  "switch_mode": str(switch_mode),
+              },
+          )
+        except Exception as e:  # pylint: disable=broad-except
+          print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+          wandb_run = None
       for i in range(n_chunks):
         md = model_dirs[i % len(model_dirs)] if switch_mode == "round_robin" else model_dirs[int(i % len(model_dirs))]
         leg_L = _len_from_name(md.name)
@@ -215,6 +239,15 @@ def main():
             restore_checkpoint_path=ckpt_leaf,
             env_config_path=tmp_path,
             save_intermediate_checkpoints=False,
+            wandb_run=wandb_run,
+            step_offset=int(cumulative_steps),
+            total_steps_override=int(num_timesteps),
+            wandb_extra_log_data={
+                "uniform_leg/chunk": int(i + 1),
+                "uniform_leg/model_dir": md.name,
+                "uniform_leg/leg_length_m": float(leg_L),
+                "uniform_leg/first_seen": float(first_seen),
+            },
         )
         if archive_final_per_chunk:
           _archive_chunk_final_checkpoint(
@@ -231,6 +264,12 @@ def main():
             f"[UNIFORM_LEG] chunk done in {t1 - t0:.2f}s | "
             f"model={md.name} leg_length_m={leg_L:.3f} | ckpt={ckpt_leaf}"
         )
+        cumulative_steps += int(chunk_steps)
+      if wandb_run is not None:
+        try:
+          wandb_run.finish()
+        except Exception:
+          pass
 
   elif mode == "rough":
     rough_cfg = cfg.get("rough", {}) or {}
@@ -252,6 +291,7 @@ def main():
     else:
       import re
       import tempfile
+      import datetime
 
       model_dirs = sorted([p for p in models_dir.iterdir() if p.is_dir() and p.name.startswith("len_")])
       if not model_dirs:
@@ -265,6 +305,28 @@ def main():
       n_chunks = max(int((num_timesteps + switch_chunk - 1) // switch_chunk), 1)
       ckpt_leaf = restore
       seen_models: set[str] = set()
+      cumulative_steps = 0
+
+      wandb_run = None
+      if os.environ.get("WANDB_MODE", "").lower() != "disabled":
+        try:
+          import wandb  # local import
+
+          wandb_run = wandb.init(
+              project="ChopstickbotJoystickCurriculum",
+              name=f"{env_name_rough}_rough_uniform_leg_pool_switch_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}",
+              config={
+                  "env_name": str(env_name_rough),
+                  "mode": "rough",
+                  "num_timesteps_total": int(num_timesteps),
+                  "switch_chunk_timesteps": int(switch_chunk),
+                  "n_models": int(len(model_dirs)),
+                  "switch_mode": str(switch_mode),
+              },
+          )
+        except Exception as e:  # pylint: disable=broad-except
+          print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+          wandb_run = None
       for i in range(n_chunks):
         md = model_dirs[i % len(model_dirs)] if switch_mode == "round_robin" else model_dirs[int(i % len(model_dirs))]
         leg_L = _len_from_name(md.name)
@@ -300,6 +362,15 @@ def main():
             restore_checkpoint_path=ckpt_leaf,
             env_config_path=tmp_path,
             save_intermediate_checkpoints=False,
+            wandb_run=wandb_run,
+            step_offset=int(cumulative_steps),
+            total_steps_override=int(num_timesteps),
+            wandb_extra_log_data={
+                "uniform_leg/chunk": int(i + 1),
+                "uniform_leg/model_dir": md.name,
+                "uniform_leg/leg_length_m": float(leg_L),
+                "uniform_leg/first_seen": float(first_seen),
+            },
         )
         if archive_final_per_chunk:
           _archive_chunk_final_checkpoint(
@@ -316,6 +387,12 @@ def main():
             f"[UNIFORM_LEG] chunk done in {t1 - t0:.2f}s | "
             f"model={md.name} leg_length_m={leg_L:.3f} | ckpt={ckpt_leaf}"
         )
+        cumulative_steps += int(chunk_steps)
+      if wandb_run is not None:
+        try:
+          wandb_run.finish()
+        except Exception:
+          pass
 
   elif mode == "curriculum":
     cur_cfg = cfg.get("curriculum", {}) or {}

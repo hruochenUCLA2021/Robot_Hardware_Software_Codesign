@@ -62,17 +62,21 @@ def _configure_jax():
 
 
 def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
-                       wandb_run: wandb.sdk.wandb_run.Run | None = None):
+                       wandb_run: wandb.sdk.wandb_run.Run | None = None,
+                       *,
+                       step_offset: int = 0,
+                       extra_log_data: dict | None = None):
   """Create progress printing + (optional) W&B logging function."""
 
   def progress_fn(num_steps: int, metrics):
     reward = metrics.get("eval/episode_reward", 0.0)
     length = metrics.get("eval/episode_length", 0.0)
-    pct = 100.0 * float(num_steps) / float(total_steps) if total_steps > 0 else 0.0
+    global_step = int(step_offset) + int(num_steps)
+    pct = 100.0 * float(global_step) / float(total_steps) if total_steps > 0 else 0.0
     elapsed = datetime.now() - start_time
     elapsed_min = elapsed.total_seconds() / 60.0
     print(
-        f"[{env_name}] {num_steps:,}/{total_steps:,} steps "
+        f"[{env_name}] {global_step:,}/{total_steps:,} steps "
         f"({pct:5.2f}%) | elapsed={elapsed_min:6.2f} min | "
         f"Reward={float(reward):.2f}, Length={float(length):.1f}"
     )
@@ -82,7 +86,10 @@ def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
 
     # Log everything in metrics to W&B if enabled.
     if wandb_run is not None:
-      log_data = {"steps": float(num_steps)}
+      log_data = {"steps": float(global_step)}
+      if extra_log_data:
+        for k, v in extra_log_data.items():
+          log_data[k] = v
       for k, v in metrics.items():
         try:
           if isinstance(v, (int, float)):
@@ -92,7 +99,7 @@ def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
             log_data[k] = float(np.asarray(v))
         except Exception:
           continue
-      wandb_run.log(log_data, step=int(num_steps))
+      wandb_run.log(log_data, step=int(global_step))
 
   return progress_fn
 
@@ -181,6 +188,10 @@ def train_stage(
     restore_checkpoint_path: Optional[epath.Path] = None,
     env_config_path: str | None = None,
     save_intermediate_checkpoints: bool = True,
+    wandb_run: wandb.sdk.wandb_run.Run | None = None,
+    step_offset: int = 0,
+    total_steps_override: int | None = None,
+    wandb_extra_log_data: dict | None = None,
 ) -> epath.Path:
   """Train a single stage (flat or rough) of the ChopstickBot joystick curriculum."""
   t_stage0 = time.perf_counter()
@@ -252,18 +263,21 @@ def train_stage(
 
   # Initialise a separate W&B run for this stage (optional).
   # If the user is not logged in / does not want W&B, we continue without it.
-  wandb_run = None
-  if num_evals > 0:
-    try:
-      wandb_run = wandb.init(
-          project="ChopstickbotJoystickCurriculum",
-          name=f"{env_name}_{stage_name}",
-          config=dict(ppo_params),
-      )
-    except Exception as e:  # pylint: disable=broad-except
-      print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
-  else:
-    print("[WANDB] Skipping wandb.init because num_evals=0 (no eval/progress logging).")
+  wandb_created_here = False
+  if wandb_run is None:
+    if num_evals > 0:
+      try:
+        wandb_run = wandb.init(
+            project="ChopstickbotJoystickCurriculum",
+            name=f"{env_name}_{stage_name}",
+            config=dict(ppo_params),
+        )
+        wandb_created_here = True
+      except Exception as e:  # pylint: disable=broad-except
+        print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+        wandb_run = None
+    else:
+      print("[WANDB] Skipping wandb.init because num_evals=0 (no eval/progress logging).")
 
   # Stage-specific checkpoint directory.
   base_ckpt_root = (epath.Path(_THIS_DIR) / "checkpoints").resolve()
@@ -284,8 +298,14 @@ def train_stage(
     print(f"Warning: failed to save env_config.yaml ({e})")
 
   start_time = datetime.now()
+  total_steps_for_log = int(total_steps_override) if total_steps_override is not None else int(num_timesteps)
   progress_fn = create_progress_fn(
-      env_name + f"_{stage_name}", num_timesteps, start_time, wandb_run
+      env_name + f"_{stage_name}",
+      total_steps_for_log,
+      start_time,
+      wandb_run,
+      step_offset=int(step_offset),
+      extra_log_data=wandb_extra_log_data,
   )
   randomizer = hi_randomize.domain_randomize
 
@@ -363,7 +383,7 @@ def train_stage(
         f"stage_total={t_stage1 - t_stage0:.2f}s"
     )
   # Finish W&B run for this stage.
-  if wandb_run is not None:
+  if wandb_created_here and (wandb_run is not None):
     wandb_run.finish()
   return final_ckpt_dir
 
