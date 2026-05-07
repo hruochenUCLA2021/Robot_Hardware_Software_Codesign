@@ -32,6 +32,10 @@ uniform_leg:
   switch_chunk_timesteps: 5_000_000
   # round_robin|random (random not implemented yet; round-robin is deterministic)
   switch_mode: round_robin
+  # If true, each chunk still overwrites `<ckpt_root>/final/` (for restore),
+  # but also copies a snapshot to:
+  #   `<ckpt_root>/chunks/chunk_XXXX_len_YY.YYm/final/`
+  archive_final_per_chunk: true
 
 wandb:
   ## WANDB_API_KEY: if non-empty, overrides any existing env var.

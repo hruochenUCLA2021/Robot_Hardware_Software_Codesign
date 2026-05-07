@@ -16,6 +16,7 @@ receives the logs (the underlying *_wandb trainers log metrics to W&B).
 import os
 import sys
 
+import shutil
 import time
 import yaml
 from etils import epath
@@ -50,6 +51,49 @@ def _load_config(path: str) -> dict:
     return yaml.safe_load(f) or {}
 
 
+def _archive_chunk_final_checkpoint(
+    *,
+    src_final_dir: epath.Path,
+    chunk_idx: int,
+    model_dir_name: str,
+    stage_name: str,
+    leg_length_m: float,
+    xml_override: epath.Path,
+    chunk_steps: int,
+):
+  """Copies the overwritten `final/` checkpoint into a per-chunk subfolder."""
+  if not src_final_dir.exists():
+    raise FileNotFoundError(f"Expected final checkpoint dir not found: {src_final_dir}")
+
+  ckpt_root = src_final_dir.parent
+  chunk_root = ckpt_root / "chunks" / f"chunk_{chunk_idx:04d}_{model_dir_name}"
+  dst_final_dir = chunk_root / "final"
+  dst_final_dir.parent.mkdir(parents=True, exist_ok=True)
+
+  # Ensure we capture an exact snapshot for this chunk.
+  if dst_final_dir.exists():
+    shutil.rmtree(dst_final_dir.as_posix())
+  shutil.copytree(src_final_dir.as_posix(), dst_final_dir.as_posix())
+
+  # Also snapshot the env_config used for this chunk (if present).
+  env_cfg = ckpt_root / "env_config.yaml"
+  if env_cfg.exists():
+    shutil.copy2(env_cfg.as_posix(), (chunk_root / "env_config.yaml").as_posix())
+
+  # Small metadata file for debugging / bookkeeping.
+  meta = {
+      "chunk_idx": int(chunk_idx),
+      "stage_name": str(stage_name),
+      "model_dir_name": str(model_dir_name),
+      "leg_length_m": float(leg_length_m),
+      "chunk_steps": int(chunk_steps),
+      "xml_override": xml_override.as_posix(),
+      "src_final_dir": src_final_dir.as_posix(),
+  }
+  with (chunk_root / "chunk_meta.yaml").open("w", encoding="utf-8") as f:
+    yaml.safe_dump(meta, f, sort_keys=False)
+
+
 def main():
   # Load training config.
   config_path = os.path.join(_THIS_DIR, "train_chopstickbot_joystick_config_uniform_leg.yaml")
@@ -79,6 +123,7 @@ def main():
   models_dir = uniform_cfg.get("models_dir")
   switch_chunk = int(uniform_cfg.get("switch_chunk_timesteps", 5_000_000))
   switch_mode = str(uniform_cfg.get("switch_mode", "round_robin")).lower()
+  archive_final_per_chunk = bool(uniform_cfg.get("archive_final_per_chunk", True))
   if models_dir:
     # Resolve models_dir relative to project root.
     models_dir = epath.Path(models_dir)
@@ -171,6 +216,16 @@ def main():
             env_config_path=tmp_path,
             save_intermediate_checkpoints=False,
         )
+        if archive_final_per_chunk:
+          _archive_chunk_final_checkpoint(
+              src_final_dir=epath.Path(ckpt_leaf),
+              chunk_idx=i + 1,
+              model_dir_name=md.name,
+              stage_name="flat",
+              leg_length_m=leg_L,
+              xml_override=xml_override,
+              chunk_steps=chunk_steps,
+          )
         t1 = time.perf_counter()
         print(
             f"[UNIFORM_LEG] chunk done in {t1 - t0:.2f}s | "
@@ -246,6 +301,16 @@ def main():
             env_config_path=tmp_path,
             save_intermediate_checkpoints=False,
         )
+        if archive_final_per_chunk:
+          _archive_chunk_final_checkpoint(
+              src_final_dir=epath.Path(ckpt_leaf),
+              chunk_idx=i + 1,
+              model_dir_name=md.name,
+              stage_name="rough",
+              leg_length_m=leg_L,
+              xml_override=xml_override,
+              chunk_steps=chunk_steps,
+          )
         t1 = time.perf_counter()
         print(
             f"[UNIFORM_LEG] chunk done in {t1 - t0:.2f}s | "
