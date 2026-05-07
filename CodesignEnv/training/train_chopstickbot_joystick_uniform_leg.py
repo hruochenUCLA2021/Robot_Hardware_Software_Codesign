@@ -172,7 +172,7 @@ def main():
         raise RuntimeError(f"No model subfolders found under: {models_dir}")
       # Derive leg length from folder name "len_0.50m".
       def _len_from_name(name: str) -> float:
-        m = re.match(r"len_([0-9]+(?:\\.[0-9]+)?)m$", name)
+        m = re.match(r"len_([0-9]+(?:\.[0-9]+)?)m$", name)
         if not m:
           raise ValueError(f"Unexpected model folder name: {name}")
         return float(m.group(1))
@@ -257,7 +257,7 @@ def main():
       if not model_dirs:
         raise RuntimeError(f"No model subfolders found under: {models_dir}")
       def _len_from_name(name: str) -> float:
-        m = re.match(r"len_([0-9]+(?:\\.[0-9]+)?)m$", name)
+        m = re.match(r"len_([0-9]+(?:\.[0-9]+)?)m$", name)
         if not m:
           raise ValueError(f"Unexpected model folder name: {name}")
         return float(m.group(1))
