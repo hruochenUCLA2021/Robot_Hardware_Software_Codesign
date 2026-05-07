@@ -164,11 +164,12 @@ def main():
             env_name=str(env_name_flat),
             stage_name="flat",
             num_timesteps=chunk_steps,
-            num_evals=int(flat_cfg.get("num_evals", 10)),
+            num_evals=int(flat_cfg.get("num_evals", 1)),
             num_envs=int(flat_cfg.get("num_envs", 8_192)),
             num_eval_envs=int(flat_cfg.get("num_eval_envs", 64)),
             restore_checkpoint_path=ckpt_leaf,
             env_config_path=tmp_path,
+            save_intermediate_checkpoints=False,
         )
         t1 = time.perf_counter()
         print(
@@ -238,11 +239,12 @@ def main():
             env_name=str(env_name_rough),
             stage_name="rough",
             num_timesteps=chunk_steps,
-            num_evals=int(rough_cfg.get("num_evals", 10)),
+            num_evals=int(rough_cfg.get("num_evals", 1)),
             num_envs=int(rough_cfg.get("num_envs", 8_192)),
             num_eval_envs=int(rough_cfg.get("num_eval_envs", 64)),
             restore_checkpoint_path=ckpt_leaf,
             env_config_path=tmp_path,
+            save_intermediate_checkpoints=False,
         )
         t1 = time.perf_counter()
         print(

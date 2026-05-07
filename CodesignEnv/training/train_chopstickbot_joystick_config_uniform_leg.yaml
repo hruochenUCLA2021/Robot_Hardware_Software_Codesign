@@ -42,7 +42,7 @@ flat:
   ## Number of PPO timesteps for flat-only training.
   num_timesteps: 500_000_000
   ## PPO evaluation and parallelism settings for flat-only training.
-  num_evals: 10
+  num_evals: 1
   num_envs: 8192
   num_eval_envs: 64
   ## If null: start from scratch.
@@ -54,7 +54,7 @@ rough:
   ## Number of PPO timesteps for rough-only training.
   num_timesteps: 100000000
   ## PPO evaluation and parallelism settings for rough-only training.
-  num_evals: 10
+  num_evals: 1
   num_envs: 8192
   num_eval_envs: 64
   from_checkpoint: null

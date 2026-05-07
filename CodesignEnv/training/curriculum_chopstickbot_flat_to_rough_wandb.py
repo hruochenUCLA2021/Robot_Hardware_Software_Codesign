@@ -180,6 +180,7 @@ def train_stage(
     num_eval_envs: int = 64,
     restore_checkpoint_path: Optional[epath.Path] = None,
     env_config_path: str | None = None,
+    save_intermediate_checkpoints: bool = True,
 ) -> epath.Path:
   """Train a single stage (flat or rough) of the ChopstickBot joystick curriculum."""
   t_stage0 = time.perf_counter()
@@ -252,14 +253,17 @@ def train_stage(
   # Initialise a separate W&B run for this stage (optional).
   # If the user is not logged in / does not want W&B, we continue without it.
   wandb_run = None
-  try:
-    wandb_run = wandb.init(
-        project="ChopstickbotJoystickCurriculum",
-        name=f"{env_name}_{stage_name}",
-        config=dict(ppo_params),
-    )
-  except Exception as e:  # pylint: disable=broad-except
-    print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+  if num_evals > 0:
+    try:
+      wandb_run = wandb.init(
+          project="ChopstickbotJoystickCurriculum",
+          name=f"{env_name}_{stage_name}",
+          config=dict(ppo_params),
+      )
+    except Exception as e:  # pylint: disable=broad-except
+      print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+  else:
+    print("[WANDB] Skipping wandb.init because num_evals=0 (no eval/progress logging).")
 
   # Stage-specific checkpoint directory.
   base_ckpt_root = (epath.Path(_THIS_DIR) / "checkpoints").resolve()
@@ -294,14 +298,16 @@ def train_stage(
     )
     del ppo_training_params["network_factory"]
   normalize_observations = bool(ppo_params.get("normalize_observations", True))
-  policy_params_fn = create_policy_params_fn(
-      ckpt_path,
-      observation_size=env.observation_size,
-      action_size=int(env.action_size),
-      normalize_observations=normalize_observations,
-      network_factory=network_factory,
-      save_network_config=True,
-  )
+  policy_params_fn = (lambda *args, **kwargs: None)
+  if save_intermediate_checkpoints:
+    policy_params_fn = create_policy_params_fn(
+        ckpt_path,
+        observation_size=env.observation_size,
+        action_size=int(env.action_size),
+        normalize_observations=normalize_observations,
+        network_factory=network_factory,
+        save_network_config=True,
+    )
 
   print(f"restore_checkpoint_path for stage '{stage_name}': {restore_checkpoint_path}")
 
