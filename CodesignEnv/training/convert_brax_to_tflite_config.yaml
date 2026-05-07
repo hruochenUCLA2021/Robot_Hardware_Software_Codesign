@@ -22,7 +22,12 @@ job_name:
   # - phonebot_flat_alter_fv2
   # - phonebot_flat_alter_fv2_torque_awared_home_straight_v1
   # - phonebot_rough_alter_fv2_torque_awared_home_straight_v1
-  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable
+  # - phonebot_half_v2_89128960
+  # - phonebot_half_v2_178257920
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3
+  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4
   # - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
   # - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
 
@@ -74,6 +79,39 @@ jobs:
     out_dir: exported_tflite
     out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680_actor.tflite
     out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680_actor_metadata.json
+
+
+  phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_home_straight_v1_look_unstable
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable_actor_metadata.json
+
+  phonebot_half_v2_178257920:
+    checkpoint_dir: checkpoints/half_v2/178257920
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_half_v2_178257920_actor.tflite
+    out_metadata_json: phonebot_half_v2_178257920_actor_metadata.json
+
+  phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_v3
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3_actor_metadata.json
+
+  phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_v4
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: null
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4_actor_metadata.json
 
   chopstickbot_flat_alter_torque_awared_curriculum_v1_v1:
     checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrainAlterTorqueAwared_flat_curriculum_v1_v1

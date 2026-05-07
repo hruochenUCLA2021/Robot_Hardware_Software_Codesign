@@ -1,0 +1,78 @@
+## Training configuration for `train_chopstickbot_joystick.py`
+##
+## mode: which training regime to run
+##   - "flat"       : train only ChopstickbotJoystickFlatTerrain
+##   - "rough"      : train only ChopstickbotJoystickRoughTerrain
+##   - "curriculum" : train flat first, then rough, with optional checkpoint init
+
+mode: flat  # flat|rough|curriculum
+
+environment:
+  ## Optional: path to a YAML file with env config overrides (e.g. reward
+  ## scales, push_config, etc.). If null, the built-in defaults are used.
+  # env_config_path: /home/romela5090/Documents/HRC_documents/Robot_Hardware_Software_Codesign/CodesignEnv/training/chopstick_env_config.yaml
+  env_config_path: null
+  ## If true, use the registry envs that load the *_alternative_imu scene XMLs:
+  ##   - ChopstickbotJoystickFlatTerrainAlter
+  ##   - ChopstickbotJoystickRoughTerrainAlter
+  # use_alternative_imu: false
+  use_alternative_imu: true
+  ## Optional explicit overrides (if provided, take precedence over use_alternative_imu):
+  ## env_name_flat: ChopstickbotJoystickFlatTerrainAlterUniformLeg
+  ## env_name_rough: ChopstickbotJoystickRoughTerrainAlterUniformLeg
+
+# Option A (recommended): switch among a pool of pre-generated MJCFs.
+# If models_dir is null, training behaves like normal single-XML training.
+uniform_leg:
+  # Folder containing subfolders like `len_0.50m/` each with:
+  # - `scene_joystick_flat_terrain_chopstickbot.xml`
+  # - `scene_joystick_rough_terrain_chopstickbot.xml`
+  models_dir: models/model_chopstickbot_leglen_sweep
+  # Timesteps per chunk before switching to another morphology (model).
+  switch_chunk_timesteps: 5_000_000
+  # round_robin|random (random not implemented yet; round-robin is deterministic)
+  switch_mode: round_robin
+
+wandb:
+  ## WANDB_API_KEY: if non-empty, overrides any existing env var.
+  ## Leave as null to use the key already in your environment.
+  api_key: null
+
+flat:
+  ## Number of PPO timesteps for flat-only training.
+  num_timesteps: 500_000_000
+  ## PPO evaluation and parallelism settings for flat-only training.
+  num_evals: 10
+  num_envs: 8192
+  num_eval_envs: 64
+  ## If null: start from scratch.
+  ## If a path: directory of a previous checkpoint to continue from.
+  from_checkpoint: null
+  # from_checkpoint: null
+
+rough:
+  ## Number of PPO timesteps for rough-only training.
+  num_timesteps: 100000000
+  ## PPO evaluation and parallelism settings for rough-only training.
+  num_evals: 10
+  num_envs: 8192
+  num_eval_envs: 64
+  from_checkpoint: null
+
+curriculum:
+  ## Stage 1 (flat):
+  flat_num_timesteps: 100000000
+  flat_num_evals: 10
+  flat_num_envs: 8192
+  flat_num_eval_envs: 64
+  flat_from_checkpoint: null
+
+  ## Stage 2 (rough):
+  rough_num_timesteps: 100000000
+  rough_num_evals: 10
+  rough_num_envs: 8192
+  rough_num_eval_envs: 64
+  ## If null: default is to continue from the flat stage's final checkpoint.
+  rough_from_checkpoint: null
+
+

@@ -64,6 +64,58 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p policy_format:=tflite \
   -p tflite_backend:=litert \
   -p home_keyframe_name:=home_straight
+
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_half_v2_89128960_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_half_v2_178257920_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_half_v2_178257920_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
+
+  
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
+
+
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+  --ros-args \
+  -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4_actor.tflite \
+  -p policy_format:=tflite \
+  -p tflite_backend:=litert \
+  -p home_keyframe_name:=home_straight \
+  -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
+
 ```
 
 If the TFLite mode hangs when importing TensorFlow, install LiteRT (recommended, supports Python 3.12):

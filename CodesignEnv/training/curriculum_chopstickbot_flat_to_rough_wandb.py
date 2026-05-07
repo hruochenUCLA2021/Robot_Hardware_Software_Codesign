@@ -21,6 +21,7 @@ os.environ.setdefault("MUJOCO_GL", "egl")
 
 import sys
 import functools
+import time
 from datetime import datetime
 from typing import Optional
 
@@ -181,6 +182,7 @@ def train_stage(
     env_config_path: str | None = None,
 ) -> epath.Path:
   """Train a single stage (flat or rough) of the ChopstickBot joystick curriculum."""
+  t_stage0 = time.perf_counter()
   _configure_jax()
 
   print("=" * 80)
@@ -208,6 +210,8 @@ def train_stage(
     except Exception as e:  # pylint: disable=broad-except
       print(f"Warning: failed to load env_config from {cfg_path}: {e}")
 
+  t_cfg_done = time.perf_counter()
+
   print(
       f"Environment config: ctrl_dt={env_cfg.ctrl_dt}, "
       f"sim_dt={env_cfg.sim_dt}"
@@ -217,6 +221,7 @@ def train_stage(
   # Explicitly choose the joystick task based on env_name so that the correct
   # scene XML is used for each curriculum stage.
   is_alt = "Alter" in env_name
+  is_uniform_leg = "UniformLeg" in env_name
   if "FlatTerrain" in env_name:
     task = "flat_terrain"
   elif "RoughTerrain" in env_name:
@@ -225,9 +230,14 @@ def train_stage(
     raise ValueError(f"Unexpected env_name for joystick stage: {env_name}")
   if is_alt:
     task = f"{task}_alternative_imu"
+  if is_uniform_leg:
+    task = f"{task}_uniform_leg"
+
+  t_task_done = time.perf_counter()
 
   env = EnvClass(task=task, config=env_cfg)
   eval_env = EnvClass(task=task, config=env_cfg)
+  t_env_done = time.perf_counter()
   print(f"Environment created: {type(env).__name__}")
   print(f"Action size: {env.action_size}")
 
@@ -295,6 +305,7 @@ def train_stage(
 
   print(f"restore_checkpoint_path for stage '{stage_name}': {restore_checkpoint_path}")
 
+  t_train0 = time.perf_counter()
   make_inference_fn, params, metrics = ppo.train(
       environment=env,
       eval_env=eval_env,
@@ -306,6 +317,7 @@ def train_stage(
       restore_checkpoint_path=restore_checkpoint_path,
       **ppo_training_params,
   )
+  t_train1 = time.perf_counter()
 
   end_time = datetime.now()
   print("\n" + "=" * 80)
@@ -334,6 +346,16 @@ def train_stage(
     pass
 
   print(f"Final policy for stage '{stage_name}' saved to: {final_ckpt_dir}")
+  t_stage1 = time.perf_counter()
+  if "UniformLeg" in str(env_name):
+    print(
+        "[TIMING] "
+        f"cfg_load+merge={t_cfg_done - t_stage0:.2f}s | "
+        f"task_select={t_task_done - t_cfg_done:.2f}s | "
+        f"env_build={t_env_done - t_task_done:.2f}s | "
+        f"ppo.train={t_train1 - t_train0:.2f}s | "
+        f"stage_total={t_stage1 - t_stage0:.2f}s"
+    )
   # Finish W&B run for this stage.
   if wandb_run is not None:
     wandb_run.finish()

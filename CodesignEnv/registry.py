@@ -7,6 +7,7 @@ tasks for PhoneBot and ChopstickBot joystick training.
 
 from .configs import chopstick_joystick
 from .configs import chopstick_joystick_torque_awared
+from .configs import chopstick_joystick_uniform_leg
 from .configs import phonebot_joystick
 from .configs import phonebot_joystick_torque_awared
 from .configs import phonebot_joystick_torque_awared_ankle_collision
@@ -21,6 +22,8 @@ ENVIRONMENTS = [
     "ChopstickbotJoystickRoughTerrainAlter",
     "ChopstickbotJoystickFlatTerrainAlterTorqueAwared",
     "ChopstickbotJoystickRoughTerrainAlterTorqueAwared",
+    "ChopstickbotJoystickFlatTerrainAlterUniformLeg",
+    "ChopstickbotJoystickRoughTerrainAlterUniformLeg",
     "PhonebotJoystickFlatTerrainAlter",
     "PhonebotJoystickRoughTerrainAlter",
     "PhonebotJoystickFlatTerrainAlterFV2",
@@ -50,6 +53,10 @@ def get_environment(name: str):
         return chopstick_joystick_torque_awared.Joystick, chopstick_joystick_torque_awared.default_config
     if name == "ChopstickbotJoystickRoughTerrainAlterTorqueAwared":
         return chopstick_joystick_torque_awared.Joystick, chopstick_joystick_torque_awared.default_config
+    if name == "ChopstickbotJoystickFlatTerrainAlterUniformLeg":
+        return chopstick_joystick_uniform_leg.Joystick, chopstick_joystick_uniform_leg.default_config
+    if name == "ChopstickbotJoystickRoughTerrainAlterUniformLeg":
+        return chopstick_joystick_uniform_leg.Joystick, chopstick_joystick_uniform_leg.default_config
     if name == "PhonebotJoystickFlatTerrainAlter":
         return phonebot_joystick.Joystick, phonebot_joystick.default_config
     if name == "PhonebotJoystickRoughTerrainAlter":

@@ -27,6 +27,7 @@ CHOPSTICKBOT_XML_ROOT = MODELS_ROOT / "model_chopstickbot"
 PHONEBOT_FV2_XML_ROOT = MODELS_ROOT / "model_phonebot_fred_v2"
 PHONEBOT_FV2_TORQUE_XML_ROOT = MODELS_ROOT / "model_phonebot_fred_v2_torque_version"
 CHOPSTICKBOT_TORQUE_XML_ROOT = MODELS_ROOT / "model_chopstickbot_torque_version"
+CHOPSTICKBOT_LEGLEN_SWEEP_XML_ROOT = MODELS_ROOT / "model_chopstickbot_leglen_sweep"
 
 PHONEBOT_JOYSTICK_FLAT_TERRAIN_XML = PHONEBOT_XML_ROOT / "scene_joystick_flat_terrain.xml"
 PHONEBOT_JOYSTICK_ROUGH_TERRAIN_XML = PHONEBOT_XML_ROOT / "scene_joystick_rough_terrain.xml"
@@ -73,6 +74,16 @@ CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_TORQUE_XML = (
     CHOPSTICKBOT_TORQUE_XML_ROOT / "scene_joystick_rough_terrain_alternative_imu.xml"
 )
 
+# Uniform-leg sweep: default to the reference-length model folder (matches generator ref length).
+# Training scripts should override `xml_path_override` to use other lengths.
+CHOPSTICKBOT_UNIFORM_LEG_REF_DIR = CHOPSTICKBOT_LEGLEN_SWEEP_XML_ROOT / "len_0.20m"
+CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_UNIFORM_LEG_XML = (
+    CHOPSTICKBOT_UNIFORM_LEG_REF_DIR / "scene_joystick_flat_terrain_chopstickbot.xml"
+)
+CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_UNIFORM_LEG_XML = (
+    CHOPSTICKBOT_UNIFORM_LEG_REF_DIR / "scene_joystick_rough_terrain_chopstickbot.xml"
+)
+
 
 def task_to_xml(task_name: str) -> epath.Path:
   """Map task name to a scene XML."""
@@ -93,6 +104,8 @@ def task_to_xml(task_name: str) -> epath.Path:
       "chopstickbot_rough_terrain_alternative_imu": CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML,
       "chopstickbot_flat_terrain_alternative_imu_torque": CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_TORQUE_XML,
       "chopstickbot_rough_terrain_alternative_imu_torque": CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_TORQUE_XML,
+      "chopstickbot_flat_terrain_alternative_imu_uniform_leg": CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_UNIFORM_LEG_XML,
+      "chopstickbot_rough_terrain_alternative_imu_uniform_leg": CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_UNIFORM_LEG_XML,
   }
   if task_name not in mapping:
     raise KeyError(f"Unknown Codesign task '{task_name}'. Available: {list(mapping.keys())}")
@@ -132,6 +145,10 @@ def chopstickbot_task_to_xml(task: str) -> epath.Path:
     return CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_XML
   if task == "rough_terrain_alternative_imu":
     return CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_XML
+  if task == "flat_terrain_alternative_imu_uniform_leg":
+    return CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_UNIFORM_LEG_XML
+  if task == "rough_terrain_alternative_imu_uniform_leg":
+    return CHOPSTICKBOT_JOYSTICK_ROUGH_TERRAIN_ALTERNATIVE_IMU_UNIFORM_LEG_XML
   if task == "flat_terrain_alternative_imu_torque":
     return CHOPSTICKBOT_JOYSTICK_FLAT_TERRAIN_ALTERNATIVE_IMU_TORQUE_XML
   if task == "rough_terrain_alternative_imu_torque":
