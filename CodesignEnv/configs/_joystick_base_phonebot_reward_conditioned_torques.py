@@ -60,9 +60,10 @@ def default_config() -> config_dict.ConfigDict:
               # Energy-related penalties (HERMES style). Keep 0 by default; tune later.
               # torques=0.0,
               # torques=-0.0001,
-              torques=-0.1,
+              torques=-1.0,
               # torques_square=-0.01,
-              torques_square=-0.0001,
+              # torques_square=-0.0001,
+              torques_square=-1.0,
 
               energy=0.0,
               action_rate=-0.01,
