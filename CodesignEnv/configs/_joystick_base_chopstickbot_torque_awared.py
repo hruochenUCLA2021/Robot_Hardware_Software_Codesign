@@ -32,6 +32,9 @@ def default_config() -> config_dict.ConfigDict:
       episode_length=1000,
       action_repeat=1,
       action_scale=1.0,
+      # Optional: explicit override for the MuJoCo scene XML path.
+      # If set, environment wrappers may ignore task->XML mapping.
+      xml_path_override="",
       # Which keyframe to use for initialization + default pose.
       home_keyframe_name="home",
       # Torque controller parameters are loaded from this YAML at env init time.

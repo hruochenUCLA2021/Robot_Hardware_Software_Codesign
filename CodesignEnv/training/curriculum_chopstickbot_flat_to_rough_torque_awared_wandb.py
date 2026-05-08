@@ -61,17 +61,27 @@ def _configure_jax():
 
 
 def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
-                       wandb_run: wandb.sdk.wandb_run.Run | None = None):
+                       wandb_run: wandb.sdk.wandb_run.Run | None = None,
+                       *,
+                       step_offset: int = 0,
+                       extra_log_data: dict | None = None,
+                       last_global_step_out: list[int] | None = None):
   """Create progress printing + (optional) W&B logging function."""
 
   def progress_fn(num_steps: int, metrics):
     reward = metrics.get("eval/episode_reward", 0.0)
     length = metrics.get("eval/episode_length", 0.0)
-    pct = 100.0 * float(num_steps) / float(total_steps) if total_steps > 0 else 0.0
+    global_step = int(step_offset) + int(num_steps)
+    if last_global_step_out is not None:
+      try:
+        last_global_step_out[0] = max(int(last_global_step_out[0]), int(global_step))
+      except Exception:
+        pass
+    pct = 100.0 * float(global_step) / float(total_steps) if total_steps > 0 else 0.0
     elapsed = datetime.now() - start_time
     elapsed_min = elapsed.total_seconds() / 60.0
     print(
-        f"[{env_name}] {num_steps:,}/{total_steps:,} steps "
+        f"[{env_name}] {global_step:,}/{total_steps:,} steps "
         f"({pct:5.2f}%) | elapsed={elapsed_min:6.2f} min | "
         f"Reward={float(reward):.2f}, Length={float(length):.1f}"
     )
@@ -81,7 +91,10 @@ def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
 
     # Log everything in metrics to W&B if enabled.
     if wandb_run is not None:
-      log_data = {"steps": float(num_steps)}
+      log_data = {"steps": float(global_step)}
+      if extra_log_data:
+        for k, v in extra_log_data.items():
+          log_data[k] = v
       for k, v in metrics.items():
         try:
           if isinstance(v, (int, float)):
@@ -91,7 +104,7 @@ def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
             log_data[k] = float(np.asarray(v))
         except Exception:
           continue
-      wandb_run.log(log_data, step=int(num_steps))
+      wandb_run.log(log_data, step=int(global_step))
 
   return progress_fn
 
@@ -180,6 +193,13 @@ def train_stage(
     restore_checkpoint_path: Optional[epath.Path] = None,
     env_config_path: str | None = None,
     env_config_overrides: dict | None = None,
+    save_intermediate_checkpoints: bool = True,
+    wandb_run: wandb.sdk.wandb_run.Run | None = None,
+    step_offset: int = 0,
+    total_steps_override: int | None = None,
+    wandb_extra_log_data: dict | None = None,
+    checkpoint_root: epath.Path | None = None,
+    checkpoint_name: str | None = None,
 ) -> epath.Path:
   """Train a single stage (flat or rough) of the ChopstickBot joystick curriculum."""
   _configure_jax()
@@ -191,6 +211,22 @@ def train_stage(
   # Get environment class and default config from local Codesign registry.
   EnvClass, default_config = env_registry.get_environment(env_name)
   env_cfg = default_config()
+
+  def _deep_update_cfg(target, src):
+    if not isinstance(src, dict):
+      return
+    for k, v in src.items():
+      try:
+        cur = target.get(k)
+      except Exception:
+        cur = None
+      if isinstance(v, dict) and (cur is not None) and isinstance(cur, (dict, config_dict.ConfigDict)):
+        _deep_update_cfg(cur, v)
+      else:
+        try:
+          target[k] = v
+        except Exception:
+          setattr(target, k, v)
 
   # Optional: merge in environment overrides from a YAML config file (for
   # example, a previously saved `env_config.yaml` from a training run). This
@@ -204,7 +240,7 @@ def train_stage(
       with cfg_path.open("r", encoding="utf-8") as f:
         loaded = yaml.safe_load(f) or {}
       if isinstance(loaded, dict):
-        env_cfg.update(loaded)
+        _deep_update_cfg(env_cfg, loaded)
       print(f"[CURRICULUM] Applied env_config overrides from: {cfg_path}")
     except Exception as e:  # pylint: disable=broad-except
       print(f"Warning: failed to load env_config from {cfg_path}: {e}")
@@ -212,8 +248,9 @@ def train_stage(
   # Apply explicit overrides from the caller (highest priority).
   if env_config_overrides:
     try:
-      env_cfg.update(dict(env_config_overrides))
-      print(f"[CURRICULUM] Applied env_config_overrides: {env_config_overrides}")
+      if isinstance(env_config_overrides, dict):
+        _deep_update_cfg(env_cfg, env_config_overrides)
+      print("[CURRICULUM] Applied env_config_overrides (dict).")
     except Exception as e:  # pylint: disable=broad-except
       print(f"Warning: failed to apply env_config_overrides ({e})")
 
@@ -256,19 +293,34 @@ def train_stage(
 
   # Initialise a separate W&B run for this stage (optional).
   # If the user is not logged in / does not want W&B, we continue without it.
-  wandb_run = None
-  try:
-    wandb_run = wandb.init(
-        project="ChopstickbotJoystickCurriculum",
-        name=f"{env_name}_{stage_name}",
-        config=dict(ppo_params),
-    )
-  except Exception as e:  # pylint: disable=broad-except
-    print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+  wandb_created_here = False
+  if wandb_run is None:
+    if num_evals > 0:
+      try:
+        wandb_run = wandb.init(
+            project="ChopstickbotJoystickCurriculum",
+            name=f"{env_name}_{stage_name}",
+            config=dict(ppo_params),
+        )
+        wandb_created_here = True
+      except Exception as e:  # pylint: disable=broad-except
+        print(f"[WANDB] Disabled for this run (wandb.init failed): {e}")
+        wandb_run = None
+    else:
+      print("[WANDB] Skipping wandb.init because num_evals=0 (no eval/progress logging).")
 
   # Stage-specific checkpoint directory.
-  base_ckpt_root = (epath.Path(_THIS_DIR) / "checkpoints").resolve()
-  ckpt_path = base_ckpt_root / f"{env_name}_{stage_name}"
+  base_ckpt_root = checkpoint_root
+  if base_ckpt_root is None:
+    base_ckpt_root = (epath.Path(_THIS_DIR) / "checkpoints").resolve()
+  else:
+    base_ckpt_root = epath.Path(base_ckpt_root).expanduser()
+    if not base_ckpt_root.is_absolute():
+      base_ckpt_root = (epath.Path(_THIS_DIR) / base_ckpt_root).resolve()
+    base_ckpt_root = base_ckpt_root.resolve()
+
+  leaf = checkpoint_name if checkpoint_name else f"{env_name}_{stage_name}"
+  ckpt_path = base_ckpt_root / str(leaf)
   ckpt_path.mkdir(parents=True, exist_ok=True)
   print(f"Checkpoint path: {ckpt_path}")
 
@@ -285,8 +337,16 @@ def train_stage(
     print(f"Warning: failed to save env_config.yaml ({e})")
 
   start_time = datetime.now()
+  total_steps_for_log = int(total_steps_override) if total_steps_override is not None else int(num_timesteps)
+  last_global_step = [int(step_offset)]
   progress_fn = create_progress_fn(
-      env_name + f"_{stage_name}", num_timesteps, start_time, wandb_run
+      env_name + f"_{stage_name}",
+      total_steps_for_log,
+      start_time,
+      wandb_run,
+      step_offset=int(step_offset),
+      extra_log_data=wandb_extra_log_data,
+      last_global_step_out=last_global_step,
   )
   randomizer = hi_randomize.domain_randomize
 
@@ -299,14 +359,16 @@ def train_stage(
     )
     del ppo_training_params["network_factory"]
   normalize_observations = bool(ppo_params.get("normalize_observations", True))
-  policy_params_fn = create_policy_params_fn(
-      ckpt_path,
-      observation_size=env.observation_size,
-      action_size=int(env.action_size),
-      normalize_observations=normalize_observations,
-      network_factory=network_factory,
-      save_network_config=True,
-  )
+  policy_params_fn = (lambda *args, **kwargs: None)
+  if save_intermediate_checkpoints:
+    policy_params_fn = create_policy_params_fn(
+        ckpt_path,
+        observation_size=env.observation_size,
+        action_size=int(env.action_size),
+        normalize_observations=normalize_observations,
+        network_factory=network_factory,
+        save_network_config=True,
+    )
 
   print(f"restore_checkpoint_path for stage '{stage_name}': {restore_checkpoint_path}")
 
@@ -349,8 +411,18 @@ def train_stage(
     pass
 
   print(f"Final policy for stage '{stage_name}' saved to: {final_ckpt_dir}")
-  # Finish W&B run for this stage.
+
+  # Log stage-level timing once (optional). Use last logged step to keep W&B monotonic.
   if wandb_run is not None:
+    try:
+      global_step_end_nominal = int(step_offset) + int(num_timesteps)
+      global_step_end = max(int(last_global_step[0]), int(global_step_end_nominal))
+      wandb_run.log({"timing/stage_total_s": float((datetime.now() - start_time).total_seconds())}, step=global_step_end)
+    except Exception:
+      pass
+
+  # Finish W&B run for this stage (only if we created it here).
+  if wandb_created_here and (wandb_run is not None):
     wandb_run.finish()
   return final_ckpt_dir
 

@@ -1,0 +1,106 @@
+## General Chopstickbot rollout (MuJoCo CPU) recording videos.
+##
+## Run:
+##   python load_and_rollout_chopstickbot_joystick_general.py
+##   python load_and_rollout_chopstickbot_joystick_general.py rollout_chopstickbot_joystick_general_config.yaml
+##
+## `job_name` can be: string | list[string] | "all"
+
+# Default behavior (can be overridden per-job / per-rollout):
+show_contact: true
+record_json: true
+auto_plot: true
+plot:
+  figsize_per_subplot: [12, 2.5]
+  dpi: 150
+
+# Pick a job below (or set to "all").
+job_name: chopstick_flat_len_020_position_brax
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Position-control expert (leglen sweep) - Brax checkpoint
+  # ---------------------------------------------------------------------------
+  chopstick_flat_len_020_position_brax:
+    policy_format: brax   # brax|tflite|auto
+    policy_path: checkpoints/ChopstickbotJoystickExperts/position_len_0.20m/final
+
+    # Explicit scene XML (CPU rollout always uses this file)
+    xml_path: models/model_chopstickbot_leglen_sweep/len_0.20m/scene_joystick_flat_terrain_chopstickbot.xml
+
+    # Optional: used only for Brax restore fallback + action_scale inference.
+    env_name: ChopstickbotJoystickFlatTerrainAlter
+    task: flat_terrain_alternative_imu
+    env_config_path: null
+
+    # Recommended: make env build use same XML (for restore/controller).
+    env_config_overrides:
+      xml_path_override: models/model_chopstickbot_leglen_sweep/len_0.20m/scene_joystick_flat_terrain_chopstickbot.xml
+
+    home_keyframe_name: home
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+
+    # Action scaling: if null, try to read from env config; else uses 1.0
+    action_scale: null
+
+    output_dir: video_rollout_chopstickbot_general
+
+    rollouts:
+      - name: forward_track
+        out: forward_track.mp4
+        command: [0.5, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+
+      - name: side_track
+        out: side_track.mp4
+        command: [0.0, 0.25, 0.0]
+        camera: track
+
+      - name: turn_track
+        out: turn_track.mp4
+        command: [0.0, 0.0, 0.75]
+        camera: track
+
+  # ---------------------------------------------------------------------------
+  # Torque-aware expert (leglen sweep) - Brax checkpoint
+  # Uses torque controller to write `d.ctrl[:] = tau` in MuJoCo CPU rollout.
+  # ---------------------------------------------------------------------------
+  chopstick_flat_len_020_torque_brax:
+    policy_format: brax
+    policy_path: checkpoints/ChopstickbotJoystickExperts/torque_len_0.20m/final
+
+    xml_path: models/model_chopstickbot_leglen_sweep/len_0.20m/scene_joystick_flat_terrain_chopstickbot.xml
+
+    # Used for torque-controller reuse + action_scale inference + Brax restore fallback.
+    env_name: ChopstickbotJoystickFlatTerrainAlterTorqueAwared
+    task: flat_terrain_alternative_imu_torque
+    env_config_path: null
+    env_config_overrides:
+      xml_path_override: models/model_chopstickbot_leglen_sweep/len_0.20m/scene_joystick_flat_terrain_chopstickbot.xml
+
+    home_keyframe_name: home
+    start_pose_default: [0.0, 0.0, 0.0]
+
+    physics_hz: 500
+    control_hz: 50
+    fps: 50
+    render_every: 1
+    show_contact: true
+    action_scale: null
+
+    output_dir: video_rollout_chopstickbot_general
+
+    rollouts:
+      - name: forward_track
+        out: forward_track_torque.mp4
+        command: [0.5, 0.0, 0.0]
+        camera: track
+        max_steps: 1000
+

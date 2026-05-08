@@ -193,11 +193,14 @@ def train_stage(
     num_eval_envs: int = 64,
     restore_checkpoint_path: Optional[epath.Path] = None,
     env_config_path: str | None = None,
+    env_config_overrides: dict | None = None,
     save_intermediate_checkpoints: bool = True,
     wandb_run: wandb.sdk.wandb_run.Run | None = None,
     step_offset: int = 0,
     total_steps_override: int | None = None,
     wandb_extra_log_data: dict | None = None,
+    checkpoint_root: epath.Path | None = None,
+    checkpoint_name: str | None = None,
 ) -> epath.Path:
   """Train a single stage (flat or rough) of the ChopstickBot joystick curriculum."""
   t_stage0 = time.perf_counter()
@@ -211,6 +214,22 @@ def train_stage(
   EnvClass, default_config = env_registry.get_environment(env_name)
   env_cfg = default_config()
 
+  def _deep_update_cfg(target, src):
+    if not isinstance(src, dict):
+      return
+    for k, v in src.items():
+      try:
+        cur = target.get(k)
+      except Exception:
+        cur = None
+      if isinstance(v, dict) and (cur is not None) and isinstance(cur, (dict, config_dict.ConfigDict)):
+        _deep_update_cfg(cur, v)
+      else:
+        try:
+          target[k] = v
+        except Exception:
+          setattr(target, k, v)
+
   # Optional: merge in environment overrides from a YAML config file (for
   # example, a previously saved `env_config.yaml` from a training run). This
   # allows you to exactly reproduce a previous env configuration.
@@ -223,10 +242,19 @@ def train_stage(
       with cfg_path.open("r", encoding="utf-8") as f:
         loaded = yaml.safe_load(f) or {}
       if isinstance(loaded, dict):
-        env_cfg.update(loaded)
+        _deep_update_cfg(env_cfg, loaded)
       print(f"[CURRICULUM] Applied env_config overrides from: {cfg_path}")
     except Exception as e:  # pylint: disable=broad-except
       print(f"Warning: failed to load env_config from {cfg_path}: {e}")
+
+  # Optional: programmatic overrides (e.g. sweep XMLs without writing temp YAMLs).
+  if env_config_overrides:
+    try:
+      if isinstance(env_config_overrides, dict):
+        _deep_update_cfg(env_cfg, env_config_overrides)
+      print("[CURRICULUM] Applied env_config_overrides (dict).")
+    except Exception as e:  # pylint: disable=broad-except
+      print(f"Warning: failed to apply env_config_overrides ({e})")
 
   t_cfg_done = time.perf_counter()
 
@@ -286,8 +314,17 @@ def train_stage(
       print("[WANDB] Skipping wandb.init because num_evals=0 (no eval/progress logging).")
 
   # Stage-specific checkpoint directory.
-  base_ckpt_root = (epath.Path(_THIS_DIR) / "checkpoints").resolve()
-  ckpt_path = base_ckpt_root / f"{env_name}_{stage_name}"
+  base_ckpt_root = checkpoint_root
+  if base_ckpt_root is None:
+    base_ckpt_root = (epath.Path(_THIS_DIR) / "checkpoints").resolve()
+  else:
+    base_ckpt_root = epath.Path(base_ckpt_root).expanduser()
+    if not base_ckpt_root.is_absolute():
+      base_ckpt_root = (epath.Path(_THIS_DIR) / base_ckpt_root).resolve()
+    base_ckpt_root = base_ckpt_root.resolve()
+
+  leaf = checkpoint_name if checkpoint_name else f"{env_name}_{stage_name}"
+  ckpt_path = base_ckpt_root / str(leaf)
   ckpt_path.mkdir(parents=True, exist_ok=True)
   print(f"Checkpoint path: {ckpt_path}")
 

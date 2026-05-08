@@ -29,6 +29,9 @@ def default_config() -> config_dict.ConfigDict:
       episode_length=1000,
       action_repeat=1,
       action_scale=1.0,
+      # Optional: explicit override for the MuJoCo scene XML path.
+      # If set, environment wrappers may ignore task->XML mapping.
+      xml_path_override="",
       tracking_sigma=0.25,
       noise_config=config_dict.create(
           level=0.6,

@@ -26,8 +26,28 @@ class Joystick(BaseJoystick):
       config: config_dict.ConfigDict = default_config(),
       config_overrides: Optional[Dict[str, Union[str, int, list[Any]]]] = None,
   ):
+    # Allow training/rollout scripts to override the exact scene XML path.
+    xml_override = ""
+    try:
+      xml_override = str(getattr(config, "xml_path_override", "") or "").strip()
+    except Exception:
+      xml_override = ""
+
+    if xml_override:
+      # Resolve relative paths against Robot_Hardware_Software_Codesign/ root.
+      try:
+        from etils import epath
+
+        p = epath.Path(xml_override).expanduser()
+        if not p.is_absolute():
+          p = (consts.PROJECT_ROOT / p).resolve()
+        xml_path = p.as_posix()
+      except Exception:
+        xml_path = xml_override
+    else:
+      xml_path = consts.chopstickbot_task_to_xml(task).as_posix()
     super().__init__(
-        xml_path=consts.chopstickbot_task_to_xml(task).as_posix(),
+        xml_path=xml_path,
         config=config,
         config_overrides=config_overrides,
     )

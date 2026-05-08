@@ -1,0 +1,63 @@
+## Expert sweep training for Chopstickbot joystick policies.
+##
+## This trains a *separate* policy checkpoint for each leg-length XML variant
+## under `models_dir/len_*/...xml`, optionally chaining the final checkpoint from
+## one model as the initialization for the next model.
+##
+## Output layout (default):
+##   checkpoints/ChopstickbotJoystickExperts/<expert_name>/final
+##
+## Where <expert_name> defaults to: "<control_mode>_<len_folder_name>"
+## e.g. "position_len_0.20m"
+##
+
+# Directory containing len_0.20m/, len_0.30m/, ...
+models_dir: models/model_chopstickbot_leglen_sweep
+
+# Which terrain scene to use for each model.
+# - flat:  scene_joystick_flat_terrain_chopstickbot.xml
+# - rough: scene_joystick_rough_terrain_chopstickbot.xml
+terrain: flat
+
+# Which environment family to use.
+# - position: uses `_joystick_base_chopstickbot.py` (position control)
+# - torque:    uses `_joystick_base_chopstickbot_torque_awared.py` (torque-aware)
+control_mode: position
+
+# For position control envs, you can choose Alter (alternative IMU) or not.
+# For torque-aware envs, current registry uses AlterTorqueAwared (Alter is implied).
+use_alternative_imu: true
+
+# PPO timesteps per expert/model.
+num_timesteps_per_model: 100000000
+
+# If provided, this checkpoint is used to initialize the *first* model in the sweep.
+# If null, start from scratch for the first model.
+initial_from_checkpoint: null
+
+# If true, the previous model's final checkpoint becomes the next model's restore path.
+chain_restore: true
+
+# Optional extra tag to include in expert folder names.
+# e.g. "flat", "rough", "v1" -> "position_flat_len_0.20m"
+checkpoint_tag: ""
+
+# Root output directory for all expert checkpoints (relative to this training/ dir).
+checkpoint_root: checkpoints/ChopstickbotJoystickExperts
+
+# Optional: path to a YAML file with additional env config overrides shared by all experts
+# (reward scales, push_config, command ranges, etc.).
+env_config_path: null
+
+ppo:
+  num_evals: 10
+  num_envs: 8192
+  num_eval_envs: 64
+  # Typically keep off for expert sweeps (saves disk + time).
+  save_intermediate_checkpoints: false
+
+wandb:
+  ## WANDB_API_KEY: if non-empty, overrides any existing env var.
+  ## Leave as null to use the key already in your environment.
+  api_key: null
+
