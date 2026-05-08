@@ -51,17 +51,6 @@ def _load_config(path: str) -> dict:
     return yaml.safe_load(f) or {}
 
 
-def _fmt_hms(seconds: float) -> str:
-  seconds = max(float(seconds), 0.0)
-  s = int(seconds + 0.5)
-  h = s // 3600
-  m = (s % 3600) // 60
-  sec = s % 60
-  if h > 0:
-    return f"{h:d}:{m:02d}:{sec:02d}"
-  return f"{m:d}:{sec:02d}"
-
-
 def _archive_chunk_final_checkpoint(
     *,
     src_final_dir: epath.Path,
@@ -193,7 +182,6 @@ def main():
       ckpt_leaf = restore
       seen_models: set[str] = set()
       cumulative_steps = 0
-      run_t0 = time.perf_counter()
 
       # Create one W&B run for the entire multi-chunk training (if enabled).
       wandb_run = None
@@ -276,14 +264,6 @@ def main():
             f"[UNIFORM_LEG] chunk done in {t1 - t0:.2f}s | "
             f"model={md.name} leg_length_m={leg_L:.3f} | ckpt={ckpt_leaf}"
         )
-        elapsed = time.perf_counter() - run_t0
-        avg_per_chunk = elapsed / float(i + 1)
-        eta = avg_per_chunk * float(n_chunks - (i + 1))
-        print(
-            f"[UNIFORM_LEG] progress: chunk {i+1}/{n_chunks} | "
-            f"elapsed={_fmt_hms(elapsed)} | avg/chunk={avg_per_chunk:.1f}s | "
-            f"ETA={_fmt_hms(eta)}"
-        )
         cumulative_steps += int(chunk_steps)
       if wandb_run is not None:
         try:
@@ -326,7 +306,6 @@ def main():
       ckpt_leaf = restore
       seen_models: set[str] = set()
       cumulative_steps = 0
-      run_t0 = time.perf_counter()
 
       wandb_run = None
       if os.environ.get("WANDB_MODE", "").lower() != "disabled":
@@ -407,14 +386,6 @@ def main():
         print(
             f"[UNIFORM_LEG] chunk done in {t1 - t0:.2f}s | "
             f"model={md.name} leg_length_m={leg_L:.3f} | ckpt={ckpt_leaf}"
-        )
-        elapsed = time.perf_counter() - run_t0
-        avg_per_chunk = elapsed / float(i + 1)
-        eta = avg_per_chunk * float(n_chunks - (i + 1))
-        print(
-            f"[UNIFORM_LEG] progress: chunk {i+1}/{n_chunks} | "
-            f"elapsed={_fmt_hms(elapsed)} | avg/chunk={avg_per_chunk:.1f}s | "
-            f"ETA={_fmt_hms(eta)}"
         )
         cumulative_steps += int(chunk_steps)
       if wandb_run is not None:
