@@ -382,6 +382,25 @@ def train_stage(
         f"ppo.train={t_train1 - t_train0:.2f}s | "
         f"stage_total={t_stage1 - t_stage0:.2f}s"
     )
+
+  # Log timing breakdown to W&B (if enabled). This is stage-level timing, so it is
+  # logged once at the end of the stage/chunk.
+  if wandb_run is not None:
+    try:
+      global_step_end = int(step_offset) + int(num_timesteps)
+      timing_log = {
+          "timing/cfg_load_merge_s": float(t_cfg_done - t_stage0),
+          "timing/task_select_s": float(t_task_done - t_cfg_done),
+          "timing/env_build_s": float(t_env_done - t_task_done),
+          "timing/ppo_train_s": float(t_train1 - t_train0),
+          "timing/stage_total_s": float(t_stage1 - t_stage0),
+      }
+      if wandb_extra_log_data:
+        for k, v in wandb_extra_log_data.items():
+          timing_log[k] = v
+      wandb_run.log(timing_log, step=global_step_end)
+    except Exception:
+      pass
   # Finish W&B run for this stage.
   if wandb_created_here and (wandb_run is not None):
     wandb_run.finish()

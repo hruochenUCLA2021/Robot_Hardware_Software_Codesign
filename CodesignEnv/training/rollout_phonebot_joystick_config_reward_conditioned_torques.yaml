@@ -37,6 +37,22 @@ show_contact: true
 # training run). If null, the default joystick env config is used.
 env_config_path: null
 
+# Optional reward-conditioning overrides (for PhonebotJoystick*RewardConditionedTorques).
+# If omitted, the env will sample new weights at reset using its default range.
+#
+# - torque_weights: explicit per-actuator weights (length == nu). Useful for debugging.
+# - torque_weight_config: overrides keys inside `torque_weight_config` (range, scale, resample).
+#
+# Examples:
+#
+# torque_weights: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+# torque_weight_config:
+#   enable: true
+#   global_scale: 1.0
+#   resample_steps: 0
+torque_weights: null
+torque_weight_config: null
+
 # Automatically plot qpos/qvel curves from recorded JSON after rollout.
 auto_plot: true
 

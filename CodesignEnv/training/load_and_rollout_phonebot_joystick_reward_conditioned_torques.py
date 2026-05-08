@@ -120,6 +120,7 @@ def load_policy_from_checkpoint(
     ckpt_dir: epath.Path,
     env_name: str = "PhonebotJoystickFlatTerrain",
     env_config_path: str | None = None,
+    env_config_overrides: dict | None = None,
 ):
   """Load joystick policy from a specific checkpoint directory."""
   # Build environment config and instance.
@@ -145,6 +146,13 @@ def load_policy_from_checkpoint(
       print(f"Warning: failed to load env_config from {cfg_path}: {e}")
   else:
     print("[LOAD] No env_config_path provided; using default env_cfg from registry.")
+
+  if env_config_overrides:
+    try:
+      env_cfg.update(dict(env_config_overrides))
+      print(f"[LOAD] Applied env_config_overrides: {env_config_overrides}")
+    except Exception as e:  # pylint: disable=broad-except
+      print(f"Warning: failed to apply env_config_overrides ({e})")
 
   # For joystick environments, explicitly choose the task so that we load the
   # correct scene XML (flat vs rough). Other envs keep their own defaults.
@@ -559,10 +567,26 @@ def main():
   env_cfg_path = cfg.get("env_config_path", None)
   if env_cfg_path is not None:
     print(f"Using env_config_path from config: '{env_cfg_path}'")
+
+  # Optional overrides for reward-conditioned torque weights.
+  env_overrides: dict = {}
+  torque_weights = cfg.get("torque_weights", None)
+  torque_weight_cfg_overrides = cfg.get("torque_weight_config", None)
+  if torque_weights is not None:
+    env_overrides.setdefault("torque_weight_config", {})
+    env_overrides["torque_weight_config"]["weights_override"] = list(torque_weights)
+  if torque_weight_cfg_overrides:
+    env_overrides.setdefault("torque_weight_config", {})
+    for k, v in dict(torque_weight_cfg_overrides).items():
+      env_overrides["torque_weight_config"][k] = v
+  if env_overrides:
+    print(f"[CONFIG] Reward-conditioned env_overrides: {env_overrides}")
+
   env, env_cfg, make_inf, params = load_policy_from_checkpoint(
       ckpt_dir,
       env_name=env_name,
       env_config_path=env_cfg_path,
+      env_config_overrides=env_overrides,
   )
 
   output_dir = cfg.get("output_dir", "video_rollout_phonebot")

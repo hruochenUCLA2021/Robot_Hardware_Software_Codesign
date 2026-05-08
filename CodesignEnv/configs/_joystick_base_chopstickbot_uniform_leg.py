@@ -104,7 +104,8 @@ def default_config() -> config_dict.ConfigDict:
           # Leg/bar length in meters (set by training scripts).
           leg_length_m=0.2,
           # Range used to normalize leg length for network input.
-          leg_length_range_m=[0.2, 5.0],
+          # leg_length_range_m=[0.2, 5.0],
+          leg_length_range_m=[0.2, 0.7],
       ),
       # Optional override to directly load a specific scene XML (used for
       # morphology switching across pre-generated XML variants).

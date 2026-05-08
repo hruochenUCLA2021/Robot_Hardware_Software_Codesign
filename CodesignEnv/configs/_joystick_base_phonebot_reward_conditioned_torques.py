@@ -117,6 +117,10 @@ def default_config() -> config_dict.ConfigDict:
       torque_weight_config=config_dict.create(
           enable=True,
           weights_range=[0.0, 1.0],
+          # Optional explicit per-actuator weights (len == nu). If provided,
+          # reset() will use these weights instead of sampling. This is useful
+          # for deterministic rollouts / debugging.
+          weights_override=None,
           # Positive multiplier applied to weights before weighting costs.
           global_scale=1.0,
           # If >0, resample the weights every N env steps (in addition to reset).
@@ -209,6 +213,16 @@ class BaseJoystick(hi_base.HiEnv):
     # Weights for pose cost: equal weights for all DOFs.
     self._weights = jp.ones((self._n_dof,), dtype=jp.float32)
 
+    # Validate reward-conditioning override weights early (Python-side).
+    tw_cfg = self._config.torque_weight_config
+    w_override = getattr(tw_cfg, "weights_override", None)
+    if w_override is not None:
+      if len(w_override) != int(self.mjx_model.nu):
+        raise ValueError(
+            "torque_weight_config.weights_override must have length == nu. "
+            f"Got len={len(w_override)} but nu={int(self.mjx_model.nu)}."
+        )
+
   def sample_command(self, rng: jax.Array) -> jax.Array:
     rng, k1, k2, k3 = jax.random.split(rng, 4)
     vx = jax.random.uniform(k1, (1,), minval=self._config.lin_vel_x[0], maxval=self._config.lin_vel_x[1])
@@ -250,11 +264,16 @@ class BaseJoystick(hi_base.HiEnv):
     # Reward-conditioning weights (per actuator).
     tw_cfg = self._config.torque_weight_config
     rng, tw_rng = jax.random.split(rng)
-    torque_w = jp.where(
-        tw_cfg.enable,
-        self._sample_torque_weights(tw_rng),
-        jp.zeros((self.mjx_model.nu,), dtype=jp.float32),
-    )
+    if tw_cfg.enable:
+      if getattr(tw_cfg, "weights_override", None) is not None:
+        torque_w = jp.array(tw_cfg.weights_override, dtype=jp.float32)
+        torque_w_is_override = jp.asarray(True)
+      else:
+        torque_w = self._sample_torque_weights(tw_rng)
+        torque_w_is_override = jp.asarray(False)
+    else:
+      torque_w = jp.zeros((self.mjx_model.nu,), dtype=jp.float32)
+      torque_w_is_override = jp.asarray(False)
 
     # Sample push interval (HERMES-style).
     rng, push_rng = jax.random.split(rng)
@@ -279,6 +298,7 @@ class BaseJoystick(hi_base.HiEnv):
         "last_act": jp.zeros(self.mjx_model.nu),
         # Reward-conditioning inputs.
         "torque_w": torque_w,
+        "torque_w_is_override": torque_w_is_override,
         "torque_w_step": jp.asarray(0, dtype=jp.int32),
         "torque_w_resample_steps": jp.asarray(int(tw_cfg.resample_steps), dtype=jp.int32),
         # Privileged-only signals.
@@ -384,6 +404,7 @@ class BaseJoystick(hi_base.HiEnv):
         & (state.info["torque_w_resample_steps"] > 0)
         & (state.info["torque_w_step"] > state.info["torque_w_resample_steps"])
     )
+    do_resample = do_resample & (~state.info.get("torque_w_is_override", jp.asarray(False)))
     new_torque_w = self._sample_torque_weights(tw_rng)
     state.info["torque_w"] = jp.where(do_resample, new_torque_w, state.info["torque_w"])
     state.info["torque_w_step"] = jp.where(done | do_resample, 0, state.info["torque_w_step"])
