@@ -65,13 +65,19 @@ def create_progress_fn(env_name: str, total_steps: int, start_time: datetime,
                        wandb_run: wandb.sdk.wandb_run.Run | None = None,
                        *,
                        step_offset: int = 0,
-                       extra_log_data: dict | None = None):
+                       extra_log_data: dict | None = None,
+                       last_global_step_out: list[int] | None = None):
   """Create progress printing + (optional) W&B logging function."""
 
   def progress_fn(num_steps: int, metrics):
     reward = metrics.get("eval/episode_reward", 0.0)
     length = metrics.get("eval/episode_length", 0.0)
     global_step = int(step_offset) + int(num_steps)
+    if last_global_step_out is not None:
+      try:
+        last_global_step_out[0] = max(int(last_global_step_out[0]), int(global_step))
+      except Exception:
+        pass
     pct = 100.0 * float(global_step) / float(total_steps) if total_steps > 0 else 0.0
     elapsed = datetime.now() - start_time
     elapsed_min = elapsed.total_seconds() / 60.0
@@ -299,6 +305,7 @@ def train_stage(
 
   start_time = datetime.now()
   total_steps_for_log = int(total_steps_override) if total_steps_override is not None else int(num_timesteps)
+  last_global_step = [int(step_offset)]
   progress_fn = create_progress_fn(
       env_name + f"_{stage_name}",
       total_steps_for_log,
@@ -306,6 +313,7 @@ def train_stage(
       wandb_run,
       step_offset=int(step_offset),
       extra_log_data=wandb_extra_log_data,
+      last_global_step_out=last_global_step,
   )
   randomizer = hi_randomize.domain_randomize
 
@@ -387,7 +395,11 @@ def train_stage(
   # logged once at the end of the stage/chunk.
   if wandb_run is not None:
     try:
-      global_step_end = int(step_offset) + int(num_timesteps)
+      # PPO can overshoot `num_timesteps` due to batching/unroll alignment.
+      # If we log at `step_offset + num_timesteps`, W&B may reject the log because
+      # earlier eval/progress logs were at a larger step.
+      global_step_end_nominal = int(step_offset) + int(num_timesteps)
+      global_step_end = max(int(last_global_step[0]), int(global_step_end_nominal))
       timing_log = {
           "timing/cfg_load_merge_s": float(t_cfg_done - t_stage0),
           "timing/task_select_s": float(t_task_done - t_cfg_done),
