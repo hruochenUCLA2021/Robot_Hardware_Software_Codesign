@@ -20,7 +20,12 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'phonebot_realtime_keyboard = simulator_mujoco_phonebot.realtime_keyboard_node:main',
+            # Torque-aware realtime node (torque controller in code).
+            'phonebot_realtime_keyboard_torque = simulator_mujoco_phonebot.realtime_keyboard_torque_awared_node:main',
+            # Position-control realtime node (direct position targets to ctrl).
+            'phonebot_realtime_keyboard_position = simulator_mujoco_phonebot.realtime_keyboard_position_node:main',
+            # Backward-compatible alias (kept): points to torque-aware node.
+            'phonebot_realtime_keyboard = simulator_mujoco_phonebot.realtime_keyboard_torque_awared_node:main',
         ],
     },
 )

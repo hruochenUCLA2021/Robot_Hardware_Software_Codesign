@@ -18,20 +18,21 @@ CodesignEnv joystick policy** and controlled by the keyboard.
 After building your ROS2 workspace with `colcon build` and sourcing it:
 
 ```bash
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+## Torque-control realtime (torque-aware policies)
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat/final \
   -p home_keyframe_name:=home_straight
 
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwared_flat_curriculum_v1_home_straight_v1/final \
   -p policy_format:=brax \
   -p home_keyframe_name:=home_straight
 
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
   -p policy_format:=tflite \
@@ -39,7 +40,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p render:=true \
   -p home_keyframe_name:=home_straight
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
   -p policy_format:=tflite \
@@ -48,7 +49,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p show_contact:=true \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_rough_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
   -p policy_format:=tflite \
@@ -58,7 +59,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
 
 pip install ai-edge-litert
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_home_straight_v1_actor.tflite \
   -p policy_format:=tflite \
@@ -66,7 +67,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p home_keyframe_name:=home_straight
 
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable_actor.tflite \
   -p policy_format:=tflite \
@@ -74,7 +75,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p home_keyframe_name:=home_straight \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_half_v2_89128960_actor.tflite \
   -p policy_format:=tflite \
@@ -82,7 +83,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p home_keyframe_name:=home_straight \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_half_v2_178257920_actor.tflite \
   -p policy_format:=tflite \
@@ -90,7 +91,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p home_keyframe_name:=home_straight \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_full_collision.xml
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_half_v2_178257920_actor.tflite \
   -p policy_format:=tflite \
@@ -99,7 +100,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
 
   
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3_actor.tflite \
   -p policy_format:=tflite \
@@ -108,7 +109,7 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
 
 
-ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_torque \
   --ros-args \
   -p checkpoint_dir:=/media/hrc/T7_UBUNTU_ONLY/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign/CodesignEnv/training/exported_tflite/phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4_actor.tflite \
   -p policy_format:=tflite \
@@ -116,6 +117,32 @@ ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard \
   -p home_keyframe_name:=home_straight \
   -p xml_path:=models/model_phonebot_fred_v2_torque_version/scene_joystick_flat_terrain_alter_v2_ankle_collision.xml
 
+```
+
+## Position-control realtime (position-controlled policies)
+
+Example (Phonebot FV2 position-control policy):
+
+```bash
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_position \
+  --ros-args \
+  -p env_name:=PhonebotJoystickFlatTerrainAlterFV2 \
+  -p task:=flat_terrain_alternative_imu_fv2 \
+  -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/PhonebotJoystickFlatTerrainAlterFV2_flat/final \
+  -p policy_format:=brax \
+  -p home_keyframe_name:=home_straight
+```
+
+Example (Chopstickbot position-control joystick policy on a leglen sweep XML):
+
+```bash
+ros2 run simulator_mujoco_phonebot phonebot_realtime_keyboard_position \
+  --ros-args \
+  -p env_name:=ChopstickbotJoystickFlatTerrainAlter \
+  -p task:=flat_terrain_alternative_imu \
+  -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/ChopstickbotJoystickFlatTerrainAlter_flat/final \
+  -p policy_format:=brax \
+  -p xml_path:=models/model_chopstickbot_leglen_sweep/len_0.20m/scene_joystick_flat_terrain_chopstickbot.xml
 ```
 
 If the TFLite mode hangs when importing TensorFlow, install LiteRT (recommended, supports Python 3.12):
