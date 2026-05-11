@@ -188,6 +188,10 @@ class BaseJoystick(hi_base.HiEnv):
     params_path = str(getattr(self._config, "motor_params_path", "") or "")
     if not params_path:
       raise ValueError("motor_params_path is empty; required for torque-aware env.")
+    # Resolve relative path under `CodesignEnv/configs/` for portability.
+    # (Match Phonebot torque-aware behavior.)
+    if not params_path.startswith("/"):
+      params_path = str((consts.ROOT_PATH / "configs" / params_path).resolve())
     with open(params_path, "r", encoding="utf-8") as f:
       cfg = yaml.safe_load(f) or {}
 

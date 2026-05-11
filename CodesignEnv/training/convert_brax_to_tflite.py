@@ -81,6 +81,9 @@ def _task_from_env_name(env_name: str) -> str:
   (and chopstickbot equivalent), otherwise the env will load the wrong scene XML.
   """
   env_name = str(env_name)
+  is_phonebot = "Phonebot" in env_name
+  is_chopstickbot = "Chopstickbot" in env_name
+  robot = "phonebot" if is_phonebot else ("chopstickbot" if is_chopstickbot else "unknown")
 
   if "FlatTerrain" in env_name:
     task = "flat_terrain"
@@ -97,16 +100,29 @@ def _task_from_env_name(env_name: str) -> str:
 
   # Torque-aware variants.
   if "TorqueAwared" in env_name:
-    # Phonebot torque-aware envs in this repo are FV2-based.
-    if "AlterFV2" not in env_name:
-      raise ValueError(
-          "TorqueAwared envs expect AlterFV2 task naming in this repo. "
-          f"Got env_name={env_name!r}"
-      )
+    if robot == "phonebot":
+      # Phonebot torque-aware envs in this repo are FV2-based.
+      if "AlterFV2" not in env_name:
+        raise ValueError(
+            "Phonebot TorqueAwared envs expect AlterFV2 task naming in this repo. "
+            f"Got env_name={env_name!r}"
+        )
+    elif robot == "chopstickbot":
+      # Chopstickbot torque-aware envs are Alter-based (no FV2 in naming).
+      if ("AlterFV2" not in env_name) and ("Alter" not in env_name):
+        raise ValueError(
+            "Chopstickbot TorqueAwared envs expect Alter task naming in this repo. "
+            f"Got env_name={env_name!r}"
+        )
     task = f"{task}_torque"
 
   # Ankle-collision variant uses separate scene XMLs.
   if "AnkleCollision" in env_name:
+    if robot != "phonebot":
+      raise ValueError(
+          "AnkleCollision task naming is only supported for Phonebot in this repo. "
+          f"Got env_name={env_name!r}"
+      )
     task = f"{task}_ankle_collision"
 
   return task
@@ -130,6 +146,20 @@ def _load_policy(
     loaded = _load_yaml(str(cfg_path))
     if isinstance(loaded, dict):
       env_cfg.update(loaded)
+    # Backward/portability fix: older training runs sometimes saved absolute
+    # `motor_params_path` (machine-specific). If that absolute path does not
+    # exist on this machine, try falling back to a relative filename under
+    # `CodesignEnv/configs/`, which the env resolves automatically.
+    try:
+      mpp = str(getattr(env_cfg, "motor_params_path", "") or "")
+      if mpp.startswith("/") and (not epath.Path(mpp).expanduser().exists()):
+        cfgs_dir = (epath.Path(_THIS_DIR).parent / "configs").resolve()
+        cand = cfgs_dir / epath.Path(mpp).name
+        if cand.exists():
+          env_cfg["motor_params_path"] = cand.name
+          print(f"[LOAD] Rewrote motor_params_path to relative: {cand.name}")
+    except Exception:  # pylint: disable=broad-except
+      pass
     print(f"[LOAD] Applied env_config overrides from: {cfg_path}")
   else:
     print("[LOAD] No env_config_path provided; using default env_cfg from registry.")

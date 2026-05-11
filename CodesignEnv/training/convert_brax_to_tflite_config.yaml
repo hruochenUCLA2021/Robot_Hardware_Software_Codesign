@@ -17,17 +17,17 @@
 # - a list of strings (multiple jobs)
 # - "all" (run every job under `jobs:`)
 job_name:
-  # - phonebot_flat_ok_v6
-  # - phonebot_flat_alter_v2
-  # - phonebot_flat_alter_fv2
-  - phonebot_flat_alter_fv2_torque_awared_home_straight_v1
-  - phonebot_rough_alter_fv2_torque_awared_home_straight_v1
-  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680
-  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable
-  # - phonebot_half_v2_89128960
-  # - phonebot_half_v2_178257920
-  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3
-  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4
+  # # - phonebot_flat_ok_v6
+  # # - phonebot_flat_alter_v2
+  # # - phonebot_flat_alter_fv2
+  # - phonebot_flat_alter_fv2_torque_awared_home_straight_v1
+  # - phonebot_rough_alter_fv2_torque_awared_home_straight_v1
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_155975680
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v1_look_unstable
+  # # - phonebot_half_v2_89128960
+  # # - phonebot_half_v2_178257920
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4
   - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
   - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
 

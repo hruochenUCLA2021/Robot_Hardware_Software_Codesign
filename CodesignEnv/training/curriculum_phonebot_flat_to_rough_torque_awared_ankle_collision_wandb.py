@@ -286,6 +286,16 @@ def train_stage(
   env_cfg_path = ckpt_path / "env_config.yaml"
   try:
     cfg_dict = env_cfg.to_dict() if hasattr(env_cfg, "to_dict") else dict(env_cfg)
+    # Make saved env_config portable across machines by avoiding absolute paths
+    # for known config files that the env resolves relative to `CodesignEnv/configs/`.
+    mpp = cfg_dict.get("motor_params_path", None)
+    if isinstance(mpp, str) and mpp.startswith("/"):
+      try:
+        cfgs_dir = (epath.Path(_PROJECT_ROOT) / "CodesignEnv" / "configs").resolve()
+        mpp_p = epath.Path(mpp).expanduser().resolve()
+        cfg_dict["motor_params_path"] = mpp_p.relative_to(cfgs_dir).as_posix()
+      except Exception:  # pylint: disable=broad-except
+        pass
     with env_cfg_path.open("w", encoding="utf-8") as f:
       yaml.safe_dump(cfg_dict, f, sort_keys=False)
     print(f"Saved environment config to: {env_cfg_path}")
