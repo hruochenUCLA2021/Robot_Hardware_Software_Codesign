@@ -115,6 +115,9 @@ def default_config() -> config_dict.ConfigDict:
               joint_deviation_knee=-0.1,
               # joint_deviation_hip=-0.02,
               joint_deviation_hip=-0.1,
+              # Stand still penalty (Playground-style): keep joints near default pose
+              # when command norm is small.
+              stand_still=-0.1,
               dof_pos_limits=-1.0,
               # pose=-0.05,
               pose=-0.25,
@@ -267,11 +270,16 @@ class BaseJoystick(hi_base.HiEnv):
     return TorqueLimitedPDController(p)
 
   def sample_command(self, rng: jax.Array) -> jax.Array:
-    rng, k1, k2, k3 = jax.random.split(rng, 4)
+    rng, k1, k2, k3, k4 = jax.random.split(rng, 5)
     vx = jax.random.uniform(k1, (1,), minval=self._config.lin_vel_x[0], maxval=self._config.lin_vel_x[1])
     vy = jax.random.uniform(k2, (1,), minval=self._config.lin_vel_y[0], maxval=self._config.lin_vel_y[1])
     wz = jax.random.uniform(k3, (1,), minval=self._config.ang_vel_yaw[0], maxval=self._config.ang_vel_yaw[1])
-    return jp.hstack([vx, vy, wz])
+    # With 10% chance, set everything to zero (Playground-style).
+    return jp.where(
+        jax.random.bernoulli(k4, p=0.1),
+        jp.zeros((3,), dtype=jp.float32),
+        jp.hstack([vx, vy, wz]),
+    )
 
   def reset(self, rng: jax.Array) -> mjx_env.State:
     qpos = self._init_q
@@ -632,6 +640,14 @@ class BaseJoystick(hi_base.HiEnv):
   def _cost_pose(self, qpos: jax.Array) -> jax.Array:
     return jp.sum(jp.square(qpos - self._default_pose) * self._weights)
 
+  def _cost_stand_still(
+      self,
+      commands: jax.Array,
+      qpos: jax.Array,
+  ) -> jax.Array:
+    cmd_norm = jp.linalg.norm(commands)
+    return jp.sum(jp.abs(qpos - self._default_pose)) * (cmd_norm < 0.1)
+
   def _cost_feet_distance(self, data: mjx.Data) -> jax.Array:
     left_foot_pos = data.site_xpos[self._feet_site_id[0]]
     right_foot_pos = data.site_xpos[self._feet_site_id[1]]
@@ -709,6 +725,7 @@ class BaseJoystick(hi_base.HiEnv):
     joint_deviation_knee_cost = self._cost_joint_deviation_knee(qpos_j)
     joint_pos_limits_cost = self._cost_joint_pos_limits(qpos_j)
     pose_cost = self._cost_pose(qpos_j)
+    stand_still_cost = self._cost_stand_still(cmd, qpos_j)
     feet_distance_cost = self._cost_feet_distance(data)
 
     return {
@@ -731,6 +748,7 @@ class BaseJoystick(hi_base.HiEnv):
         "joint_deviation_hip": joint_deviation_hip_cost,
         "dof_pos_limits": joint_pos_limits_cost,
         "pose": pose_cost,
+        "stand_still": stand_still_cost,
         "feet_distance": feet_distance_cost,
         "feet_height": self._cost_feet_height(info["swing_peak"], first_contact),
         "alive": jp.array(1.0),

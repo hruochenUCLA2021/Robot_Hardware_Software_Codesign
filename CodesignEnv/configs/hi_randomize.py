@@ -81,7 +81,7 @@ def domain_randomize(model: mjx.Model, rng: jax.Array):
     # Contact friction (scale all geoms uniformly).
     # geom_friction: (ngeom, 3) = [sliding, torsional, rolling].
     # -----------------------------------------------------------------------
-    fric_scale = _u(k_fric, lo=0.7, hi=1.3)
+    fric_scale = _u(k_fric, lo=0.3, hi=1.3)
     geom_friction = model.geom_friction * fric_scale
 
     # -----------------------------------------------------------------------

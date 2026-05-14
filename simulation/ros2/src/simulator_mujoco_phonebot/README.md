@@ -175,3 +175,69 @@ cd /ABS/PATH/TO/Codesign_ChopstickBot_all_files/Robot_Hardware_Software_Codesign
 - `sim_hz` (float): default 500 Hz (10 substeps at 50 Hz)
 - `max_vx`, `max_vy`, `max_wz` (float): full-speed command limits
 
+### Cross-repo realtime simulators (for comparison)
+
+These nodes run **MuJoCo CPU** simulation + viewer but load policies from
+different repos/formats so you can compare behavior.
+
+```bash
+## 1) BoosterGym TorchScript policy (T1, serial model with arms+waist)
+ros2 run simulator_mujoco_phonebot realtime_simulation_booster_gym_policy \
+  --ros-args \
+  -p config_path:=reference/booster_gym/envs/T1.yaml \
+  -p xml_path:=reference/booster_gym/resources/T1/T1_locomotion.xml \
+  -p policy_path:=checkpoints_to_test/booster_gym_t1/logs/2026-05-12-23-31-29/nn/model_10000.pt
+
+## 2) HERMES Hi Brax PPO policy (joystick / NoLinearVel)
+ros2 run simulator_mujoco_phonebot realtime_simulation_hermes_hi_policy \
+  --ros-args \
+  -p env_name:=HiJoystickFlatTerrainNoLinearVel \
+  -p checkpoint_dir:=checkpoints_to_test/HERMES_hi/HiJoystickFlatTerrainNoLinearVel_flat/final \
+  -p xml_path:=reference/HERMES_simulation_model/model_modification/mjcf/scene_joystick_flat_terrain.xml
+
+## 2b) HERMES Hi Brax PPO policy (joystick WITH velocity input)
+ros2 run simulator_mujoco_phonebot realtime_simulation_hermes_hi_policy \
+  --ros-args \
+  -p env_name:=HiJoystickFlatTerrain \
+  -p checkpoint_dir:=checkpoints_to_test/HERMES_hi/HiJoystickFlatTerrain_v6_good/final \
+  -p xml_path:=reference/HERMES_simulation_model/model_modification/mjcf/scene_joystick_flat_terrain.xml
+
+## 3) MuJoCo-Playground T1 Brax PPO policy (flat terrain)
+ros2 run simulator_mujoco_phonebot realtime_simulation_playground_t1_policy \
+  --ros-args \
+  -p env_name:=T1JoystickFlatTerrain \
+  -p checkpoint_dir:=checkpoints_to_test/mujoco_playground/T1JoystickFlatTerrain/final \
+  -p xml_path:=reference/mujoco_playground/_src/locomotion/t1/xmls/scene_mjx_feetonly_flat_terrain.xml
+```
+
+
+
+```bash
+## 1) BoosterGym TorchScript policy (T1, serial model with arms+waist)
+ros2 run simulator_mujoco_phonebot realtime_simulation_booster_gym_policy \
+  --ros-args \
+  -p config_path:=reference/booster_gym/deploy/configs/T1.yaml \
+  -p xml_path:=reference/booster_gym/resources/T1/T1_serial.xml \
+  -p policy_path:=/ABS/PATH/TO/T1.pt
+
+## 2) HERMES Hi Brax PPO policy (joystick / NoLinearVel)
+ros2 run simulator_mujoco_phonebot realtime_simulation_hermes_hi_policy \
+  --ros-args \
+  -p env_name:=HiJoystickFlatTerrainNoLinearVel \
+  -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/HiJoystickFlatTerrainNoLinearVel_flat/final \
+  -p xml_path:=reference/HERMES_simulation_model/model_modification/mjcf/scene_joystick_flat_terrain.xml
+
+## 2b) HERMES Hi Brax PPO policy (joystick WITH velocity input)
+ros2 run simulator_mujoco_phonebot realtime_simulation_hermes_hi_policy \
+  --ros-args \
+  -p env_name:=HiJoystickFlatTerrain \
+  -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/HiJoystickFlatTerrain_flat/final \
+  -p xml_path:=reference/HERMES_simulation_model/model_modification/mjcf/scene_joystick_flat_terrain.xml
+
+## 3) MuJoCo-Playground T1 Brax PPO policy (flat terrain)
+ros2 run simulator_mujoco_phonebot realtime_simulation_playground_t1_policy \
+  --ros-args \
+  -p env_name:=T1JoystickFlatTerrain \
+  -p checkpoint_dir:=/ABS/PATH/TO/checkpoints/T1JoystickFlatTerrain/final \
+  -p xml_path:=reference/mujoco_playground/_src/locomotion/t1/xmls/scene_mjx_feetonly_flat_terrain.xml
+```

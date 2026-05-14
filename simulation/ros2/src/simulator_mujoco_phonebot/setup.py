@@ -26,6 +26,11 @@ setup(
             'phonebot_realtime_keyboard_position = simulator_mujoco_phonebot.realtime_keyboard_position_node:main',
             # Backward-compatible alias (kept): points to torque-aware node.
             'phonebot_realtime_keyboard = simulator_mujoco_phonebot.realtime_keyboard_torque_awared_node:main',
+
+            # Cross-repo realtime policy runners (MuJoCo CPU).
+            'realtime_simulation_booster_gym_policy = simulator_mujoco_phonebot.realtime_simulation_booster_gym_policy:main',
+            'realtime_simulation_hermes_hi_policy = simulator_mujoco_phonebot.realtime_simulation_hermes_hi_policy:main',
+            'realtime_simulation_playground_t1_policy = simulator_mujoco_phonebot.realtime_simulation_playground_t1_policy:main',
         ],
     },
 )
