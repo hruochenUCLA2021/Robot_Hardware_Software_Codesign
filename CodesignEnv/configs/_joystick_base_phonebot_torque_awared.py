@@ -17,6 +17,7 @@ from mujoco import mjx
 from mujoco.mjx._src import math
 import numpy as np
 
+from mujoco_playground._src import gait
 from mujoco_playground._src import mjx_env
 from mujoco_playground._src.collision import geoms_colliding
 
@@ -109,7 +110,11 @@ def default_config() -> config_dict.ConfigDict:
               # feet_air_time=2.0,
               # Foot-related costs (tune later).
               feet_clearance=-0.05,
+              # Playground-style: penalize foot slip when in contact.
+              feet_slip=-0.25,
               foot_collision=-1.0,
+              # Playground-style: encourage foot swing height to match a phase schedule.
+              feet_phase=1.0,
               # Pose related rewards (HERMES NoLinearVel style).
               # joint_deviation_knee=-0.02,
               joint_deviation_knee=-0.1,
@@ -648,6 +653,35 @@ class BaseJoystick(hi_base.HiEnv):
     cmd_norm = jp.linalg.norm(commands)
     return jp.sum(jp.abs(qpos - self._default_pose)) * (cmd_norm < 0.1)
 
+  def _cost_feet_slip(self, data: mjx.Data, contact: jax.Array) -> jax.Array:
+    # Penalize foot XY velocity while in contact (Playground-style).
+    feet_vel = jp.stack(
+        [
+            mjx_env.get_sensor_data(self.mj_model, data, "left_foot_global_linvel").ravel(),
+            mjx_env.get_sensor_data(self.mj_model, data, "right_foot_global_linvel").ravel(),
+        ],
+        axis=0,
+    )
+    vel_xy = feet_vel[..., :2]
+    slip = jp.sum(jp.square(vel_xy).sum(axis=-1) * contact.astype(jp.float32))
+    return slip
+
+  def _reward_feet_phase(
+      self,
+      data: mjx.Data,
+      phase: jax.Array,
+      foot_height: jax.Array,
+      commands: jax.Array,
+  ) -> jax.Array:
+    # Reward for tracking a phase-based foot height schedule (Playground-style).
+    del commands  # Unused.
+
+    foot_pos = data.site_xpos[self._feet_site_id]
+    foot_z = foot_pos[..., -1]
+    rz = gait.get_rz(phase, swing_height=foot_height)
+    error = jp.sum(jp.square(foot_z - rz))
+    return jp.exp(-error / 0.01)
+
   def _cost_feet_distance(self, data: mjx.Data) -> jax.Array:
     left_foot_pos = data.site_xpos[self._feet_site_id[0]]
     right_foot_pos = data.site_xpos[self._feet_site_id[1]]
@@ -727,6 +761,7 @@ class BaseJoystick(hi_base.HiEnv):
     pose_cost = self._cost_pose(qpos_j)
     stand_still_cost = self._cost_stand_still(cmd, qpos_j)
     feet_distance_cost = self._cost_feet_distance(data)
+    feet_slip_cost = self._cost_feet_slip(data, contact)
 
     return {
         "tracking_lin_vel": tracking_lin,
@@ -743,6 +778,13 @@ class BaseJoystick(hi_base.HiEnv):
         "dof_vel": dof_vel_cost,
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
         "feet_clearance": feet_clearance_cost,
+        "feet_slip": feet_slip_cost,
+        "feet_phase": self._reward_feet_phase(
+            data,
+            info["phase"],
+            self._config.reward_config.max_foot_height,
+            cmd,
+        ),
         "foot_collision": foot_collision_cost,
         "joint_deviation_knee": joint_deviation_knee_cost,
         "joint_deviation_hip": joint_deviation_hip_cost,

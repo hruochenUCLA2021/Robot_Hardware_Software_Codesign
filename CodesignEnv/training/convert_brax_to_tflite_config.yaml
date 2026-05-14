@@ -28,8 +28,10 @@ job_name:
   # # - phonebot_half_v2_178257920
   # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v3
   # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4
-  - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
-  - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
+  # - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v5_new_reward_for_deadzone_behavior
+  - phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v6
+  # - chopstickbot_flat_alter_torque_awared_curriculum_v1_v1
+  # - chopstickbot_rough_alter_torque_awared_curriculum_v1_v1
 
 jobs:
   phonebot_flat_ok_v6:
@@ -112,6 +114,22 @@ jobs:
     out_dir: exported_tflite
     out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4_actor.tflite
     out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v4_actor_metadata.json
+
+  phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v6:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_v6
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_v6/env_config.yaml
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v6_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v6_actor_metadata.json
+
+  phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v5_new_reward_for_deadzone_behavior:
+    checkpoint_dir: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_v5_new_reward_for_deadzone_behavior/final
+    env_name: PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision
+    env_config_path: checkpoints/PhonebotJoystickFlatTerrainAlterFV2TorqueAwaredAnkleCollision_flat_v5_new_reward_for_deadzone_behavior/env_config.yaml
+    out_dir: exported_tflite
+    out_tflite: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v5_new_reward_for_deadzone_behavior_actor.tflite
+    out_metadata_json: phonebot_flat_alter_fv2_torque_awared_ankle_collision_home_straight_v5_new_reward_for_deadzone_behavior_actor_metadata.json
 
   chopstickbot_flat_alter_torque_awared_curriculum_v1_v1:
     checkpoint_dir: checkpoints/ChopstickbotJoystickFlatTerrainAlterTorqueAwared_flat_curriculum_v1_v1
