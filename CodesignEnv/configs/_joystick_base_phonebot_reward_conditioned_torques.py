@@ -60,7 +60,8 @@ def default_config() -> config_dict.ConfigDict:
               # Energy-related penalties (HERMES style). Keep 0 by default; tune later.
               # torques=0.0,
               # torques=-0.0001,
-              torques=-1.0,
+              # torques=-1.0,
+              torques=-0.5,
               # torques_square=-0.01,
               # torques_square=-0.0001,
               torques_square=-1.0,
@@ -69,11 +70,11 @@ def default_config() -> config_dict.ConfigDict:
               action_rate=-0.01,
 
               # dof_acc=0.0,
-              # dof_acc=-0.00000001,
-              dof_acc=-0.000004,
+              dof_acc=-0.00000001,
+              # dof_acc=-0.000004,
               # dof_vel=0.0,
-              # dof_vel=-0.00001,
-              dof_vel=-0.0001,
+              dof_vel=-0.00001,
+              # dof_vel=-0.0001,
               # dof_vel=-0.01,
 
               # feet_air_time=50.0,
@@ -122,7 +123,8 @@ def default_config() -> config_dict.ConfigDict:
           # for deterministic rollouts / debugging.
           weights_override=None,
           # Positive multiplier applied to weights before weighting costs.
-          global_scale=1.0,
+          global_scale=0.1,
+          # global_scale=1.0,
           # If >0, resample the weights every N env steps (in addition to reset).
           resample_steps=500,
       ),

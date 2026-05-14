@@ -109,13 +109,23 @@ def default_config() -> config_dict.ConfigDict:
               # feet_air_time=20.0,
               # feet_air_time=2.0,
               # Foot-related costs (tune later).
-              feet_clearance=-0.05,
+
+              # feet_clearance=-0.05,
+              # feet_clearance=-5.0,
+              feet_clearance=-10.0,
               # Playground-style: penalize foot slip when in contact.
               feet_slip=-0.25,
-              foot_collision=-1.0,
-              body_collision=-0.1,
+              # foot_collision=-1.0,
+              # foot_collision=-100.0,
+              foot_collision=-300.0,
+              # body_collision=-0.1,
+              # body_collision=-100.0,
+              body_collision=-1000.0,
+
               # Playground-style: encourage foot swing height to match a phase schedule.
               feet_phase=1.0,
+
+
               # Pose related rewards (HERMES NoLinearVel style).
               # joint_deviation_knee=-0.02,
               joint_deviation_knee=-0.1,
@@ -123,12 +133,16 @@ def default_config() -> config_dict.ConfigDict:
               joint_deviation_hip=-0.1,
               # Stand still penalty (Playground-style): keep joints near default pose
               # when command norm is small.
-              stand_still=-0.1,
+              # stand_still=-0.1,
+              stand_still=-2.0,
               dof_pos_limits=-1.0,
               # pose=-0.05,
               pose=-0.25,
               # pose=-1.0,
-              feet_distance=-1.0,
+              # feet_distance=-1.0,
+              # feet_distance=-3.0,
+              feet_distance=-10.0,
+              # feet_distance=-30.0,
               # feet_air_time=50.0,
               # HERMES-style swing-peak based foot height penalty.
               # Keep at 0.0 for now; you can turn it on later if feet skim the ground.
@@ -146,7 +160,8 @@ def default_config() -> config_dict.ConfigDict:
           enable=True,
           # enable=False,
           # interval_range=[5.0, 10.0],
-          interval_range=[5.0, 20.0],
+          interval_range=[5.0, 15.0],
+          # interval_range=[5.0, 20.0],
           magnitude_range=[0.05, 0.3], # add small push to the robot
           # magnitude_range=[0.05, 0.2], # add small push to the robot
           # magnitude_range=[0.01, 0.1], # add small push to the robot
@@ -698,7 +713,9 @@ class BaseJoystick(hi_base.HiEnv):
         jp.cos(base_yaw) * (left_foot_pos[1] - right_foot_pos[1])
         - jp.sin(base_yaw) * (left_foot_pos[0] - right_foot_pos[0])
     )
-    return jp.clip(0.2 - feet_distance, 0.0, 0.1)
+    return jp.clip(0.08 - feet_distance, 0.0, 0.1)
+    # return jp.clip(0.1 - feet_distance, 0.0, 0.1)
+    # return jp.clip(0.2 - feet_distance, 0.0, 0.1)
 
   def _cost_feet_clearance(self, data: mjx.Data) -> jax.Array:
     # HERMES-style: penalize deviation from target foot height during swing,
