@@ -110,6 +110,8 @@ def default_config() -> config_dict.ConfigDict:
               # feet_air_time=2.0,
               # Foot-related costs (tune later).
               feet_clearance=-0.05,
+              feet_parallel=-0.1,
+              feet_corner_clearance=-5.0,
               # Playground-style: penalize foot slip when in contact.
               feet_slip=-0.25,
               foot_collision=-1.0,
@@ -207,6 +209,15 @@ class BaseJoystick(hi_base.HiEnv):
         self._mj_model.site("left_foot").id,
         self._mj_model.site("right_foot").id,
     ])
+    self._foot_corner_offsets = jp.array(
+        [
+            [0.050, 0.030, -0.0041],
+            [0.050, -0.030, -0.0041],
+            [-0.050, 0.030, -0.0041],
+            [-0.050, -0.030, -0.0041],
+        ],
+        dtype=jp.float32,
+    )
     self._site_id = self._mj_model.site("imu").id
 
     # Used by rollout scripts for 2D animation. Our base body frame is (z up, y forward),
@@ -710,6 +721,31 @@ class BaseJoystick(hi_base.HiEnv):
     delta = jp.abs(foot_z - self._config.reward_config.max_foot_height)
     return jp.sum(delta * vel_norm)
 
+  def _cost_feet_parallel(self, data: mjx.Data) -> jax.Array:
+    foot_xmat = data.site_xmat[self._feet_site_id]
+    foot_z_axis = foot_xmat[..., :, 2]
+    return jp.sum(jp.square(foot_z_axis[..., :2]))
+
+  def _cost_feet_corner_clearance(self, data: mjx.Data) -> jax.Array:
+    foot_pos = data.site_xpos[self._feet_site_id]
+    foot_xmat = data.site_xmat[self._feet_site_id]
+    corner_pos = foot_pos[:, None, :] + jp.einsum(
+        "fij,cj->fci", foot_xmat, self._foot_corner_offsets
+    )
+    min_corner_z = jp.min(corner_pos[..., 2], axis=-1)
+
+    feet_vel = jp.stack(
+        [
+            mjx_env.get_sensor_data(self.mj_model, data, "left_foot_global_linvel").ravel(),
+            mjx_env.get_sensor_data(self.mj_model, data, "right_foot_global_linvel").ravel(),
+        ],
+        axis=0,
+    )
+    vel_xy = feet_vel[..., :2]
+    vel_norm = jp.sqrt(jp.linalg.norm(vel_xy, axis=-1))
+    target = self._config.reward_config.max_foot_height
+    return jp.sum(jp.maximum(0.0, target - min_corner_z) * vel_norm)
+
   def _cost_foot_collision(self, data: mjx.Data) -> jax.Array:
     # Foot tip vs foot tip collision (proxy for self-collision).
     return jp.asarray(
@@ -752,6 +788,8 @@ class BaseJoystick(hi_base.HiEnv):
     dof_acc_cost = self._cost_dof_acc(joint_qacc)
     dof_vel_cost = self._cost_dof_vel(joint_qvel)
     feet_clearance_cost = self._cost_feet_clearance(data)
+    feet_parallel_cost = self._cost_feet_parallel(data)
+    feet_corner_clearance_cost = self._cost_feet_corner_clearance(data)
     foot_collision_cost = self._cost_foot_collision(data)
     # Pose-related costs.
     qpos_j = data.qpos[7:]
@@ -778,6 +816,8 @@ class BaseJoystick(hi_base.HiEnv):
         "dof_vel": dof_vel_cost,
         "feet_air_time": self._reward_feet_air_time(info["feet_air_time"], first_contact, cmd),
         "feet_clearance": feet_clearance_cost,
+        "feet_parallel": feet_parallel_cost,
+        "feet_corner_clearance": feet_corner_clearance_cost,
         "feet_slip": feet_slip_cost,
         "feet_phase": self._reward_feet_phase(
             data,
